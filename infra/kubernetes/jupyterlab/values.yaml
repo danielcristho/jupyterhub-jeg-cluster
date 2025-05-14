@@ -60,33 +60,23 @@ hub:
       ]
 
     01-options-from-form: |
-      def options_from_form(spawner, formdata):
+      def options_from_form(formdata):
           node = formdata.get("node", [""])[0]
           new_image = formdata.get("image", ["danielcristh0/jupyterlab:cpu"])[0]
 
-          spawner.node_selector = {"kubernetes.io/hostname": node}
-          if "gpu" in new_image or "cu" in new_image or "tf" in new_image:
-              spawner.extra_resource_limits = {"nvidia.com/gpu": "1"}
-          else:
-              spawner.extra_resource_limits = {}
+          # Log the options being selected for debugging
+          import logging
+          logger = logging.getLogger('jupyterhub')
+          logger.info(f"[FORM OPTIONS] Node: {node}, Image: {new_image}")
 
-          old_image = getattr(spawner, "image", None)
+          options = {}
+          options["node"] = node
+          options["image"] = new_image
 
-          # Force restart if image changes
-          if old_image and old_image != new_image:
-              spawner.image = new_image
-              spawner.user_options["image_changed"] = True
-          else:
-              spawner.image = new_image
-              spawner.user_options["image_changed"] = False
-
-          return {}, []
-      c.Spawner.options_from_form = options_from_form
-
-    02-spawn-form: |
-      c.Spawner.form_template = "form.html"
+          return options
 
     03-load-template: |
+      import json
       from jinja2 import Template
 
       def options_form(spawner):
@@ -97,11 +87,44 @@ hub:
 
     04-force-restart-on-image-change: |
       def pre_spawn_hook(spawner):
-          if spawner.user_options.get("image_changed", False):
-              spawner.log.info(f"[AUTO-RESTART] Image changed to {spawner.image}, restarting server...")
-              raise Exception("Restarting server with new image.")
+          # Get options from user selection
+          node = spawner.user_options.get("node", "")
+          new_image = spawner.user_options.get("image", "danielcristh0/jupyterlab:cpu")
+
+          spawner.log.info(f"[DEBUG] pre_spawn_hook called with node={node}, image={new_image}")
+
+          # Set node selector if a node was selected
+          if node:
+              spawner.node_selector = {"kubernetes.io/hostname": node}
+              spawner.log.info(f"[NODE] Setting node selector to {node}")
+
+          # Check if image is GPU-enabled
+          if "gpu" in new_image or "cu" in new_image or "tf" in new_image or "rpl" in new_image:
+              spawner.extra_resource_limits = {"nvidia.com/gpu": "1"}
+              spawner.log.info(f"[GPU] Requesting GPU for image: {new_image}")
+          else:
+              # Make sure we're not requesting GPU for CPU images
+              if "extra_resource_limits" in spawner.__dict__ and "nvidia.com/gpu" in spawner.extra_resource_limits:
+                  del spawner.extra_resource_limits["nvidia.com/gpu"]
+              spawner.log.info(f"[CPU] Not requesting GPU for image: {new_image}")
+
+          # Always set the image without forcing restart
+          spawner.image = new_image
+          spawner.log.info(f"[IMAGE] Setting image to: {new_image}")
+
+          # Debug section - log important spawner attributes
+          spawner.log.info(f"[DEBUG] Spawner attributes:")
+          spawner.log.info(f"  - image: {getattr(spawner, 'image', None)}")
+          spawner.log.info(f"  - node_selector: {getattr(spawner, 'node_selector', None)}")
+          spawner.log.info(f"  - extra_resource_limits: {getattr(spawner, 'extra_resource_limits', None)}")
+
+          # DO NOT force restart until we understand the issue
+          # No exception raised = no restart
 
       c.Spawner.pre_spawn_hook = pre_spawn_hook
+
+    05-bind-options-from-form: |
+      c.Spawner.options_from_form = options_from_form
 
 proxy:
   # testing only - do not do this for production
