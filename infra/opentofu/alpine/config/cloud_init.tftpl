@@ -1,0 +1,28 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+
+users:
+  - name: alpine
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: wheel
+    home: /home/alpine
+    shell: /bin/ash
+    lock_passwd: false
+    ssh_authorized_keys:
+        - ssh-rsa AAAA...
+
+runcmd:
+  - sed -i '/PermitRootLogin/d' /etc/ssh/sshd_config
+  - echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+  - rc-service sshd restart
+  - apk update
+  - apk add qemu-guest-agent
+  - rc-update add qemu-guest-agent
+  - rc-service qemu-guest-agent start
+ssh_pwauth: true
+disable_root: false
+chpasswd:
+  list: |
+    root:whoami
+  expire: false

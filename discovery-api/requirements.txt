@@ -1,0 +1,3 @@
+flask
+redis
+ray[default]==2.12.0

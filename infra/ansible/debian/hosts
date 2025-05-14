@@ -1,0 +1,8 @@
+[k3s_master]
+192.168.122.30 ansible_user=root
+
+[k3s_worker_1]
+192.168.122.31 ansible_user=root
+
+[k3s_worker_2]
+192.168.122.32 ansible_user=root

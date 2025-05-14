@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  discovery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: discovery-api
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "redis@pass"
+    depends_on:
+      - redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      # - dаta:/root/redis
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+
+

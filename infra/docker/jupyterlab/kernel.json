@@ -1,0 +1,15 @@
+{
+    "argv": [
+      "python",
+      "-m",
+      "ipykernel_launcher",
+      "-f",
+      "{connection_file}"
+    ],
+    "display_name": "Python 3 - RAY Autoconnect",
+    "language": "python",
+    "env": {
+      "PYTHONSTARTUP": "/etc/jupyter/00-ray-init.py",
+      "RAY_ADDRESS": "ray://192.168.122.10:10001"
+    }
+  }

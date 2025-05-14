@@ -1,0 +1,28 @@
+#cloud-config
+runcmd:
+  - sed -i '/PermitRootLogin/d' /etc/ssh/sshd_config
+  - echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+  - systemctl restart sshd
+  - apt-get update
+  - apt-get install -y qemu-guest-agent
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+ssh_pwauth: true
+disable_root: false
+chpasswd:
+  list: |
+    root:whoami
+  expire: false
+users:
+  - name: ray
+    gecos: ray
+    groups:
+      - sudo
+    sudo:
+      - ALL=(ALL) NOPASSWD:ALL
+    home: /home/ray
+    shell: /bin/bash
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-rsa AAAA...
+    hostname: "${hostname}"

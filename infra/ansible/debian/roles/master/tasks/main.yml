@@ -1,0 +1,41 @@
+---
+- name: Install helm
+  ansible.builtin.shell: |
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    ./get_helm.sh
+
+- name: Install kubectl
+  ansible.builtin.shell: |
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /usr/local/bin
+
+- name: Install k3s
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="server" sh -s - --flannel-backend none
+
+- name: Configure kubeconfig
+  ansible.builtin.shell: |
+    mkdir -p /home/ray/.kube
+    cp /etc/rancher/k3s/k3s.yaml /home/ray/.kube/config
+    chown -R ray:ray /home/ray/.kube/config
+    chmod 600 /home/ray/.kube/config
+
+- name: Replace 127.0.0.1 with 192.168.122.30 in kubeconfig
+  ansible.builtin.replace:
+    path: /home/ray/.kube/config
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "https://192.168.122.30:6443"
+
+- name: Fetch k3s token
+  ansible.builtin.fetch:
+    src: /var/lib/rancher/k3s/server/node-token
+    dest: ./token
+    flat: yes
+
+- name: Fetch kubeconfig
+  ansible.builtin.fetch:
+    src: /home/ray/.kube/config
+    dest: ./kubeconfig
+    flat: yes
