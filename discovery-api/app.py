@@ -13,7 +13,6 @@ REDIS_USER = os.environ.get("REDIS_USER", "redis")
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "redis@pass")
 REDIS_EXPIRE_SECONDS = int(os.environ.get("REDIS_EXPIRE_SECONDS", 3600))
 
-
 """Ray Dashboard API"""
 DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://localhost:8265")
 
@@ -29,6 +28,7 @@ try:
 except Exception as e:
     redis_client = None
     print(f"[DiscoveryAPI] Failed to connect to Redis at {REDIS_HOST}:{REDIS_PORT} → {e}")
+
 
 @app.route("/health-check")
 def health_check():
@@ -57,10 +57,11 @@ def track_jupyter_activity():
         value = f"{user}|{timestamp}"
         """rpush, inserts all the specified values at the tail of the list stored at the key."""
         redis_client.rpush(key, value)
-        redis_client.expire(key, "REDIS_EXPIRE_SECONDS")
+        redis_client.expire(key, REDIS_EXPIRE_SECONDS)
         return jsonify({"status": "ok"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 def get_jupyter_users_for_node(node_name):
     if not redis_client:
@@ -77,8 +78,8 @@ def get_jupyter_users_for_node(node_name):
     except Exception:
         return []
 
+
 def _get_nodes(filtered=True):
-    DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://localhost:8265")
     SUMMARY_ENDPOINT = "/nodes?view=summary"
 
     try:
