@@ -1,24 +1,34 @@
 from flask import Flask, jsonify, request
 import redis
 import time, os, requests
+from dotenv import load_dotenv
 
 app = Flask(__name__)
+load_dotenv()
 
 """Redis Configuration"""
-redis_host = os.environ.get("REDIS_HOST", "redis")
-redis_port = int(os.environ.get("REDIS_PORT", "6379"))
-redis_password = os.environ.get("REDIS_PASSWORD", "redis@pass")
+REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+REDIS_USER = os.environ.get("REDIS_USER", "redis")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "redis@pass")
+REDIS_EXPIRE_SECONDS = int(os.environ.get("REDIS_EXPIRE_SECONDS", 3600))
+
+
+"""Ray Dashboard API"""
+DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://localhost:8265")
 
 try:
     redis_client = redis.StrictRedis(
-        host=redis_host,
-        port=redis_port,
-        password=redis_password,
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        username=REDIS_USER,
+        password=REDIS_PASSWORD,
         decode_responses=True
     )
+    redis_client.ping()
 except Exception as e:
     redis_client = None
-    print(f"[DiscoveryAPI] Redis connnection failed: {e}")
+    print(f"[DiscoveryAPI] Failed to connect to Redis at {REDIS_HOST}:{REDIS_PORT} → {e}")
 
 @app.route("/health-check")
 def health_check():
@@ -47,7 +57,7 @@ def track_jupyter_activity():
         value = f"{user}|{timestamp}"
         """rpush, inserts all the specified values at the tail of the list stored at the key."""
         redis_client.rpush(key, value)
-        redis_client.expire(key, 3600)
+        redis_client.expire(key, "REDIS_EXPIRE_SECONDS")
         return jsonify({"status": "ok"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -68,11 +78,11 @@ def get_jupyter_users_for_node(node_name):
         return []
 
 def _get_nodes(filtered=True):
-    dashboard_url = "http://10.21.73.122:8265"
-    summary_endpoint = "/nodes?view=summary"
+    DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://localhost:8265")
+    SUMMARY_ENDPOINT = "/nodes?view=summary"
 
     try:
-        resp = requests.get(f"{dashboard_url}{summary_endpoint}", timeout=20)
+        resp = requests.get(f"{DASHBOARD_URL}{SUMMARY_ENDPOINT}", timeout=20)
         resp.raise_for_status()
         summary = resp.json()["data"]["summary"]
 
