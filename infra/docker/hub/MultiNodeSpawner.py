@@ -2,6 +2,7 @@ from dockerspawner import DockerSpawner
 import redis
 import os
 import logging
+from dotenv import load_dotenv
 
 class MultiNodeSpawner(DockerSpawner):
     def start(self):

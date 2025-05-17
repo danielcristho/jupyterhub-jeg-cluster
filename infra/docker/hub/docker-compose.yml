@@ -28,7 +28,7 @@ services:
         su jovyan -c 'jupyterhub --config /srv/jupyterhub/jupyterhub_config.py'
       "
     ports:
-      - "8000:8000"
+      - "18000:18000"
     environment:
       # This username will be a JupyterHub admin
       JUPYTERHUB_ADMIN: admin
