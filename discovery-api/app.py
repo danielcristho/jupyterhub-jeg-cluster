@@ -14,7 +14,7 @@ REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "redis@pass")
 REDIS_EXPIRE_SECONDS = int(os.environ.get("REDIS_EXPIRE_SECONDS", 3600))
 
 """Ray Dashboard API"""
-DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://localhost:8265")
+DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://10.21.73.122:8265")
 
 try:
     redis_client = redis.StrictRedis(
