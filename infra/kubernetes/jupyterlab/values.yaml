@@ -95,7 +95,8 @@ hub:
 
           # Set node selector if a node was selected
           if node:
-              spawner.node_selector = {"kubernetes.io/hostname": node}
+              # spawner.node_selector = {"kubernetes.io/hostname": node}
+              spawner.node_selector = {}
               spawner.log.info(f"[NODE] Setting node selector to {node}")
 
           # Check if image is GPU-enabled
