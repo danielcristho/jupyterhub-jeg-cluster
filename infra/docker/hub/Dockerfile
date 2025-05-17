@@ -34,7 +34,7 @@ COPY --chown=1000:100 form.html /etc/jupyterhub/form.html
 
 WORKDIR /srv/jupyterhub
 
-EXPOSE 8000
+EXPOSE 18000
 
 USER 1000
 
