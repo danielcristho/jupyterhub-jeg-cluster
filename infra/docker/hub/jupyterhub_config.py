@@ -69,7 +69,7 @@ c.Spawner.pre_spawn_hook = pre_spawn_hook
 class AvailableNodesHandler(RequestHandler):
     def get(self):
         try:
-            resp = requests.get("http://127.0.0.1:5002/all-nodes", timeout=3)
+            resp = requests.get("http://127.0.0.1:15002/all-nodes", timeout=3)
             data = resp.json()
             data = data.get("data", data)
             available = [n for n in data if not n.get("is_in_use_by_jupyterhub")]
@@ -123,7 +123,7 @@ c.DockerSpawner.mem_guarantee = '2G'
 # ------------------------------------------------------------------------------
 
 c.JupyterHub.hub_ip = "jupyterhub"
-c.JupyterHub.hub_port = 8080
+c.JupyterHub.hub_port = 18000
 c.JupyterHub.cookie_secret_file = "/data/jupyterhub_cookie_secret"
 c.JupyterHub.db_url = "sqlite:////data/jupyterhub.sqlite"
 c.JupyterHub.cookie_max_age_days = 7
