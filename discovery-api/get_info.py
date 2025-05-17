@@ -3,7 +3,7 @@ import json
 import time
 from datetime import timedelta
 
-dashboard_url = "http://10.21.73.122:8265"
+dashboard_url = "http://10.21.73.122:18265"
 
 nodes_endpoint = "/nodes?view=summary"
 
