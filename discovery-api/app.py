@@ -1,9 +1,11 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import redis
 import time, os, requests
 from dotenv import load_dotenv
 
 app = Flask(__name__)
+CORS(app, origins="*")
 load_dotenv()
 
 """Redis Configuration"""
