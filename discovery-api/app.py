@@ -94,6 +94,7 @@ def _get_nodes(filtered=True):
             now = time.time()
             uptime_minutes = None
 
+
             try:
                 start_time_ms = float(raylet.get("startTimeMs", 0))
                 now = float(node.get("now", time.time()))
@@ -220,7 +221,10 @@ def _get_nodes(filtered=True):
                 # Jupyterhub activity info
                 "active_users": active_users,
                 "is_in_use_by_jupyterhub": len(active_users) > 0,
+
             })
+            redis_client.set(f"node:{hostname}:ip", node.get("ip", ""))
+            redis_client.expire(f"node:{hostname}:ip", REDIS_EXPIRE_SECONDS)
 
         if filtered:
             valid_states = {"ALIVE", "IDLE", "RUNNING"}

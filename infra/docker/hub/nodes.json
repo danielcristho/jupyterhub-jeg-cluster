@@ -1,0 +1,14 @@
+[
+    {
+      "hostname": "rpl-master",
+      "ip": "192.168.122.10"
+    },
+    {
+      "hostname": "rpl-worker-1",
+      "ip": "192.168.122.11"
+    },
+    {
+      "hostname": "rpl-worker-2",
+      "ip": "192.168.122.12"
+    }
+  ]
