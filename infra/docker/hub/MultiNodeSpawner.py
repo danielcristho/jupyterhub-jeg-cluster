@@ -14,7 +14,6 @@ class MultiNodeSpawner(DockerSpawner):
         # --- Redis Discovery ---
         redis_host = os.environ.get("REDIS_HOST", "redis")
         redis_port = int(os.environ.get("REDIS_PORT", 6379))
-        redis_user = os.environ.get("REDIS_USER", "redis")
         redis_pass = os.environ.get("REDIS_PASSWORD", "redis@pass")
         redis_prefix = os.environ.get("REDIS_DISCOVERY_KEY_PREFIX", "node:")
 
@@ -22,7 +21,6 @@ class MultiNodeSpawner(DockerSpawner):
             r = redis.StrictRedis(
                 host=redis_host,
                 port=redis_port,
-                username=redis_user,
                 password=redis_pass,
                 decode_responses=True
             )

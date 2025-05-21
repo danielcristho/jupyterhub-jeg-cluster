@@ -81,13 +81,20 @@
 
         function updateImageInfo(imageValue) {
             const imageInfo = document.getElementById("image-info");
+            const nodeNote = document.getElementById("node-selection-note");
 
             if (imageValue.includes("gpu") || imageValue.includes("cu") || imageValue.includes("tf") || imageValue.includes("rpl")) {
                 imageInfo.innerHTML = "<strong>GPU Image Selected:</strong> This image will request GPU resources";
                 imageInfo.className = "info-message gpu-info";
+
+                // Update node selection note
+                nodeNote.innerHTML = "🟢 GPU node will be selected automatically.";
             } else {
                 imageInfo.innerHTML = "<strong>CPU Image Selected:</strong> This image will use only CPU resources";
                 imageInfo.className = "info-message cpu-info";
+
+                // Update node selection note
+                nodeNote.innerHTML = "⚪ CPU node will be selected automatically.";
             }
         }
 
@@ -99,7 +106,8 @@
             nodeInfo.innerHTML = "<div class='loading'>Fetching available nodes...</div>";
 
             try {
-                const res = await fetch("/hub/api/available-nodes");
+                // const res = await fetch("/hub/api/available-nodes");
+                const res = await fetch("http://172.18.0.4:15002/available-nodes");
                 const nodes = await res.json();
 
                 if (nodes.length === 0) {
@@ -172,11 +180,14 @@
         <fieldset>
             <legend>JupyterLab Server Configuration</legend>
 
-            <label for="node">Select Node:</label>
+            <!-- <label for="node">Select Node:</label>
             <select name="node" id="node-select" required>
                 <option disabled selected>Loading...</option>
             </select>
-            <div id="node-info" class="node-info"></div>
+            <div id="node-info" class="node-info"></div> -->
+
+            <label for="node">Selected Node:</label>
+            <div id="node-selection-note" class="info-message">Node will be selected automatically based on the image.</div>
 
             <label for="image">Docker Image:</label>
             <select name="image" id="image-select" required>

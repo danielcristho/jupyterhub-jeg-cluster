@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     ports:
       - "15002:5002"
+    networks:
+      - jupyterhub-network
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 16379
@@ -20,12 +22,24 @@ services:
     container_name: redis
     restart: unless-stopped
     volumes:
-      # - dаta:/root/redis
+      - data:/data
       - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     ports:
-      - "16379:6379"
+      - "16379:16379"
+    networks:
+      - jupyterhub-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-p", "16379", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  data:
+
+networks:
+  jupyterhub-network:
+    name: jupyterhub-network
 
 

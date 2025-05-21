@@ -11,26 +11,36 @@ c = get_config()
 # Render form and parse selected options
 # ------------------------------------------------------------------------------
 
-def options_form(spawner):
-    with open("/etc/jupyterhub/form.html") as f:
-        return Template(f.read()).render()
-
-c.Spawner.options_form = options_form
-
 def options_from_form(formdata):
-    node = formdata.get("node", [""])[0]
     image = formdata.get("image", ["danielcristh0/jupyterlab:cpu"])[0]
+    use_gpu = any(x in image for x in ["gpu", "cu", "tf", "rpl"])
 
-    if not node:
-        raise ValueError("Node selection is required.")
-    if not image:
-        raise ValueError("Image selection is required.")
+    try:
+        # Fetch all available nodes
+        resp = requests.get("http://172.18.0.4:15002/available-nodes", timeout=3)
+        nodes = resp.json()
+    except Exception as e:
+        raise ValueError(f"Failed to get available nodes: {e}")
+
+    # Filter by GPU if needed
+    if use_gpu:
+        nodes = [n for n in nodes if n.get("has_gpu")]
+        if not nodes:
+            raise ValueError("No GPU nodes available for selected image.")
+    else:
+        nodes = [n for n in nodes if not n.get("has_gpu")]
+
+    if not nodes:
+        raise ValueError("No suitable node found.")
+
+    # Select node with lowest memory usage
+    selected = min(nodes, key=lambda n: n.get("memory_usage_percent", 100))
+    node = selected.get("hostname")
 
     logger = logging.getLogger("jupyterhub")
-    logger.info(f"[FORM OPTIONS] Node: {node}, Image: {image}")
+    logger.info(f"[AUTO-MATCH] Image: {image} → Node: {node} (GPU: {use_gpu})")
 
     return {"node": node, "image": image}
-
 
 c.Spawner.options_from_form = options_from_form
 
@@ -69,7 +79,7 @@ c.Spawner.pre_spawn_hook = pre_spawn_hook
 class AvailableNodesHandler(RequestHandler):
     def get(self):
         try:
-            resp = requests.get("http://127.0.0.1:15002/all-nodes", timeout=3)
+            resp = requests.get("http://10.21.73.122:15002/all-nodes", timeout=3)
             data = resp.json()
             data = data.get("data", data)
             available = [n for n in data if not n.get("is_in_use_by_jupyterhub")]
@@ -95,6 +105,13 @@ c.DockerSpawner.network_name = network_name
 c.DockerSpawner.extra_host_config = {
     "network_mode": network_name,
     "runtime": "nvidia"
+}
+
+c.DockerSpawner.allowed_images = {
+    "danielcristh0/jupyterlab:cpu": "JupyterLab CPU",
+    "danielcristh0/jupyterlab:rpl": "JupyterLab GPU (PyTorch)",
+    "danielcristh0/jupyterlab:cu121": "JupyterLab CUDA 12.1",
+    "danielcristh0/jupyterlab:tf": "JupyterLab TensorFlow"
 }
 
 # Notebook home dir
