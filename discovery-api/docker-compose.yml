@@ -8,9 +8,9 @@ services:
     container_name: discovery-api
     restart: unless-stopped
     ports:
-      - "15002:5002"
-    networks:
-      - jupyterhub-network
+      - "15002:15002"
+    # networks:
+    #   - jupyterhub-network
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 16379
@@ -27,8 +27,8 @@ services:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     ports:
       - "16379:16379"
-    networks:
-      - jupyterhub-network
+    # networks:
+    #   - jupyterhub-network
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "16379", "ping"]
       interval: 10s
@@ -38,8 +38,8 @@ services:
 volumes:
   data:
 
-networks:
-  jupyterhub-network:
-    name: jupyterhub-network
+# networks:
+#   jupyterhub-network:
+#     name: jupyterhub-network
 
 
