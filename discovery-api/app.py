@@ -224,6 +224,7 @@ def _load_nodes(filtered=True):
                     "disk_usage_percent": data.get("disk_usage_percent", 100),
                     "active_jupyterlab": data.get("active_jupyterlab", 0),
                     "is_in_use_by_jupyterhub": data.get("active_jupyterlab", 0) > 0,
+                    "last_updated": data.get("last_updated")
                 }
                 result.append(node_info)
                 print(f"[DEBUG] Loaded node: {node_info['hostname']}")
