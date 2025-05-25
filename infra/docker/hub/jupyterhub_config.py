@@ -17,10 +17,7 @@ missing = [key for key in required_env if not os.getenv(key)]
 if missing:
     raise RuntimeError(f"Missing required env vars: {', '.join(missing)}")
 
-# ------------------------------------------------------------------------------
-# Discovery API Configuration
-# ------------------------------------------------------------------------------
-DISCOVERY_API_URL = os.environ.get("DISCOVERY_API_URL", "http://192.168.100.102:15002")
+DISCOVERY_API_URL = os.environ.get("DISCOVERY_API_URL", "http://192.168.100.102:15002") # Discovery Service
 
 # ------------------------------------------------------------------------------
 # Custom MultiNodeSpawner with Fixed Networking
