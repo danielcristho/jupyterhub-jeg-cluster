@@ -7,7 +7,7 @@ import time
 import gpustat
 from datetime import datetime
 
-DISCOVERY_URL = os.environ.get("DISCOVERY_URL", "http://172.20.10.2:15002/register-node")
+DISCOVERY_URL = os.environ.get("DISCOVERY_URL", "http://192.168.100.246:15002/register-node")
 
 def register():
     print("[DEBUG] Mulai register node...")

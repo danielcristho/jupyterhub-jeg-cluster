@@ -57,3 +57,6 @@ netics
 
 # Environment file
 .env
+
+# Old Project
+infra/

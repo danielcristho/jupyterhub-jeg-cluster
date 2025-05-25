@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.3
 # FROM quay.io/jupyter/base-notebook:hub-5.3.0
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,12 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         libcurl4 \
         libpq5 \
-        nodejs \
-        npm \
+        # nodejs \
+        # npm \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-RUN npm install -g configurable-http-proxy@4.5.1
-
+# RUN npm install -g configurable-http-proxy@4.5.1
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip setuptools wheel \
@@ -30,7 +29,7 @@ RUN pip install --upgrade pip setuptools wheel \
 
 COPY --chown=1000:100 jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
 COPY --chown=1000:100 MultiNodeSpawner.py /srv/jupyterhub/MultiNodeSpawner.py
-COPY --chown=1000:100 form.html /etc/jupyterhub/form.html
+COPY --chown=1000:100 form.html /srv/jupyterhub/form.html
 
 WORKDIR /srv/jupyterhub
 

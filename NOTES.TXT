@@ -1,3 +1,9 @@
+# Redis
+keys *
+get node:chrstdan:ip
+get node:chrstdan:info
+
+
 ssh -p 16678 daniel@0.tcp.ap.ngrok.io \
   -L 10001:localhost:10001 \
   -L 8265:localhost:8265 \
