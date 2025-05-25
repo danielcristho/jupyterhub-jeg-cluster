@@ -17,7 +17,7 @@ class MultiNodeSpawner(DockerSpawner):
         logger.info(f"[SPAWNER] user_options: {self.user_options}")
 
         node = self.user_options.get("node", "")
-        node_ip = self.user_options.get("node_ip", "")  # NEW: Get IP directly from options
+        node_ip = self.user_options.get("node_ip", "")
         image = self.user_options.get("image", "danielcristh0/jupyterlab:cpu")
 
         # CRITICAL: Fail fast if no remote configuration
@@ -25,23 +25,20 @@ class MultiNodeSpawner(DockerSpawner):
             logger.error(f"[SPAWNER] CRITICAL: Missing remote node config. Node: {node}, IP: {node_ip}")
             raise ValueError("Remote node configuration missing. Cannot spawn to local machine.")
 
-        # CRITICAL: Set host directly from user options (bypass Redis lookup)
         self.host = f"tcp://{node_ip}:2375"
         self.tls_config = {}
         logger.info(f"[SPAWNER] Docker host FORCED to: {self.host}")
 
-        # Double-check we're not using local host
         if 'tcp://127.0.0.1' in self.host or 'localhost' in self.host:
             logger.error(f"[SPAWNER] CRITICAL: Host is still local: {self.host}")
             raise ValueError("Failed to configure remote Docker host")
 
-        # Redis discovery config (fallback only)
+        # Redis discovery config
         redis_host = os.environ.get("REDIS_HOST", "redis")
         redis_port = int(os.environ.get("REDIS_PORT", 6379))
         redis_pass = os.environ.get("REDIS_PASSWORD", "redis@pass")
         redis_prefix = os.environ.get("REDIS_DISCOVERY_KEY_PREFIX", "node:")
 
-        # Only use Redis as fallback if node_ip wasn't provided
         if not node_ip and node:
             try:
                 r = redis.StrictRedis(
@@ -88,12 +85,10 @@ class MultiNodeSpawner(DockerSpawner):
             'JUPYTER_IP': '0.0.0.0'  # Bind to all interfaces
         })
 
-        # Ensure port binding is correct
         self.extra_host_config["port_bindings"] = {
             "8888/tcp": ("0.0.0.0", None)
         }
 
-        # CRITICAL: Remove any local network configuration
         self.extra_host_config.pop("network_mode", None)
         self.use_internal_ip = False
 
@@ -111,7 +106,6 @@ class MultiNodeSpawner(DockerSpawner):
             # Call parent start method
             result = await super().start()
 
-            # Wait a bit for container to be fully ready
             await asyncio.sleep(3)
 
             # Verify container is running
