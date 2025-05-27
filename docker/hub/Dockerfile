@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1.3
-# FROM quay.io/jupyter/base-notebook:hub-5.3.0
-FROM python:3.12-slim
+FROM quay.io/jupyter/base-notebook:hub-5.3.0
 
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONPATH=/srv/jupyterhub:$PYTHONPATH
 
-RUN adduser --disabled-password --gecos "Default Jupyter user" \
-    --uid 1000 \
-     jovyan
+# RUN adduser --disabled-password --gecos "Default Jupyter user" \
+#     --uid 1000 \
+#      jovyan
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         tini \
@@ -28,8 +28,10 @@ RUN pip install --upgrade pip setuptools wheel \
  && pip install --no-cache-dir --no-index --find-links=/tmp/wheels -r /tmp/requirements.txt
 
 COPY --chown=1000:100 jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
-COPY --chown=1000:100 MultiNodeSpawner.py /srv/jupyterhub/MultiNodeSpawner.py
-COPY --chown=1000:100 form.html /srv/jupyterhub/form.html
+COPY --chown=1000:100 spawner/ /srv/jupyterhub/spawner/
+COPY --chown=1000:100 .env /srv/jupyterhub/.env
+
+COPY --chown=1000:100 src /srv/jupyterhub/src
 
 WORKDIR /srv/jupyterhub
 

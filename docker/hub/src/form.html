@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <!-- <title>JupyterLab Server Options</title> -->
+  <style>
+    label { display: block; margin-top: 1em; font-weight: bold; }
+    select, input[type="text"], input[type="number"], input[type="checkbox"] {
+      width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc;
+    }
+    fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 10px; }
+    .center-button { display: flex; justify-content: center; margin-top: 20px; }
+    .start-button {
+      background-color: #f97316;
+      color: white;
+      padding: 12px 36px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      border: none;
+    }
+    .start-button:hover { background-color: #ea580c; }
+    button[type="submit"]:not(.start-button) {
+      display: none;
+    }
+    .info-message, .success-message, .warning-message, .error-message {
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .info-message { background-color: #e4f2ff; border: 1px solid #b3d7ff; }
+    .success-message { background-color: #d1fae5; border: 1px solid #86efac; color: #065f46; }
+    .warning-message { background-color: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+    .error-message { background-color: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+    .loading { text-align: center; margin: 20px 0; font-style: italic; color: #666; }
+    .node-status { margin-top: 10px; padding: 8px; font-size: 0.9em; }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 1em;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background-color: #f9fafb;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      transform: scale(1.2);
+    }
+
+    .checkbox-container label {
+      margin: 0;
+      font-weight: normal;
+      color: #374151;
+      cursor: pointer;
+    }
+
+    .checkbox-container:hover {
+      background-color: #f3f4f6;
+    }
+  </style>
+  <script>
+    let availableNodes = [];
+    const DISCOVERY_API_URL = "http://192.168.122.1:15002";
+
+    window.onload = async function () {
+      await checkApiStatus();
+      await loadNodes();
+
+      const imageSelect = document.getElementById("image-select");
+      imageSelect.addEventListener("change", () => {
+        updateImageInfo(imageSelect.value);
+        updateNodeSelection(imageSelect.value);
+      });
+
+      const useRandomCheckbox = document.getElementById("use-random");
+      useRandomCheckbox.addEventListener("change", () => {
+        const isRandom = useRandomCheckbox.checked;
+        document.getElementById("manual-node-select").style.display = isRandom ? "none" : "block";
+        updateNodeSelection(imageSelect.value);
+      });
+
+      const nodeDropdown = document.getElementById("node-select");
+      nodeDropdown.addEventListener("change", () => {
+        const selected = availableNodes.find(n => n.hostname === nodeDropdown.value);
+        if (selected) updateNodeDetails(selected);
+      });
+
+      updateImageInfo(imageSelect.value);
+      updateNodeSelection(imageSelect.value);
+    };
+
+    async function checkApiStatus() {
+      const statusDiv = document.getElementById("api-status");
+      try {
+        const res = await fetch(`${DISCOVERY_API_URL}/health-check`);
+        const data = await res.json();
+        statusDiv.innerHTML = `<div class='success-message'>
+          ✓ Discovery API Connected<br><small>${data.message}</small></div>`;
+      } catch (e) {
+        statusDiv.innerHTML = `<div class='error-message'>
+          ✗ Discovery API Unreachable<br><small>Error: ${e.message}</small></div>`;
+      }
+    }
+
+    function updateImageInfo(imageValue) {
+      const imageSelect = document.getElementById("image-select");
+      const selectedOption = imageSelect.options[imageSelect.selectedIndex];
+      const description = selectedOption.getAttribute("data-desc") || "No description available.";
+      const isGpu = imageValue.toLowerCase().includes("gpu");
+
+      const imageInfo = document.getElementById("image-info");
+      imageInfo.innerHTML = `<strong>${isGpu ? "GPU Image" : "CPU Image"}:</strong> ${description}`;
+      imageInfo.className = isGpu ? "info-message success-message" : "info-message";
+    }
+
+    function updateNodeSelection(imageValue) {
+      const nodeStatus = document.getElementById("node-status");
+      const isRandom = document.getElementById("use-random").checked;
+      const useGpu = imageValue.toLowerCase().includes("gpu");
+
+      if (availableNodes.length === 0) {
+        nodeStatus.innerHTML = `<div class='warning-message'>No nodes available.</div>`;
+        return;
+      }
+
+      const suitableNodes = availableNodes.filter(n => useGpu ? n.has_gpu : true);
+      if (suitableNodes.length === 0) {
+        nodeStatus.innerHTML = `<div class='error-message'>No suitable nodes found.</div>`;
+        return;
+      }
+
+      if (isRandom) {
+        const selectedNode = suitableNodes.reduce((best, current) =>
+          (current.memory_usage_percent || 100) < (best.memory_usage_percent || 100) ? current : best
+        );
+        updateNodeDetails(selectedNode);
+      } else {
+        const nodeSelect = document.getElementById("node-select");
+        nodeSelect.innerHTML = `<option value="">-- Select Node --</option>`;
+        suitableNodes.forEach(n => {
+          const gpuInfo = n.gpu?.length > 0
+            ? `${n.gpu[0].name} (${n.gpu[0].memory_used_mb}/${n.gpu[0].memory_total_mb}MB)`
+            : "None";
+          const label = `${n.hostname} (${n.ip}) | CPU Usage: ${parseFloat(n.cpu_usage_percent || 0).toFixed(1)}% | RAM Usage: ${parseFloat(n.memory_usage_percent || 0).toFixed(1)}% | GPU: ${gpuInfo}`;
+          nodeSelect.innerHTML += `<option value="${n.hostname}">${label}</option>`;
+        });
+        nodeStatus.innerHTML = `<div class='info-message'>Select a node from dropdown above.</div>`;
+      }
+    }
+
+    function updateNodeDetails(node) {
+      const nodeStatus = document.getElementById("node-status");
+      const gpuStatus = node.has_gpu ? "GPU" : "CPU";
+      const cpuUsage = parseFloat(node.cpu_usage_percent || 0).toFixed(1);
+      const memUsage = parseFloat(node.memory_usage_percent || 0).toFixed(1);
+      const ramGb = parseFloat(node.ram_gb || 0).toFixed(1);
+      const gpuDetail = node.gpu?.length > 0
+        ? node.gpu.map(g => `${g.name} (${g.memory_used_mb}/${g.memory_total_mb}MB)`).join(", ")
+        : "None";
+
+      nodeStatus.innerHTML = `
+        <div class='success-message node-status'>
+          <strong>Selected Node: ${node.hostname}</strong><br>
+          CPU usage: ${cpuUsage}% of ${node.cpu} cores | RAM usage: ${memUsage}% of ${ramGb}GB<br>
+          <strong>GPU:</strong> ${gpuDetail}<br>
+          <small>IP: ${node.ip}</small>
+        </div>
+      `;
+
+      document.getElementById("input-node").value = node.hostname;
+      document.getElementById("input-node-ip").value = node.ip;
+    }
+
+    async function loadNodes() {
+      const summaryDiv = document.getElementById("nodes-summary");
+      const debugDiv = document.getElementById("debug-info");
+
+      try {
+        const res = await fetch(`${DISCOVERY_API_URL}/available-nodes`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        let nodes = await res.json();
+        if (!Array.isArray(nodes) && Array.isArray(nodes.data)) nodes = nodes.data;
+        if (!Array.isArray(nodes)) throw new Error("Invalid response format from API");
+        availableNodes = nodes;
+
+        const gpuNodes = availableNodes.filter(n => n.has_gpu).length;
+        summaryDiv.innerHTML = `<div class='info-message'>
+          <strong>Available Resources:</strong> ${availableNodes.length} nodes
+          (${gpuNodes} GPU, ${availableNodes.length - gpuNodes} CPU-only)
+        </div>`;
+
+        const imageSelect = document.getElementById("image-select");
+        updateNodeSelection(imageSelect.value);
+      } catch (e) {
+        document.getElementById("node-status").innerHTML = `<div class='error-message'>Failed to load node info<br><small>${e.message}</small></div>`;
+        debugDiv.style.display = "block";
+        debugDiv.innerHTML = `<div class="debug-info"><strong>Debug:</strong><br>${e.message}</div>`;
+      }
+    }
+  </script>
+</head>
+<body>
+  <form action="{{ url }}" method="post">
+    <fieldset>
+      <div id="api-status"></div>
+      <div id="nodes-summary"></div>
+
+      <label for="image">Docker Image:</label>
+      <select name="image" id="image-select" required>
+        <option value="danielcristh0/jupyterlab:cpu" data-desc="CPU-only JupyterLab for basic tasks">danielcristh0/jupyterlab:cpu</option>
+        <option value="danielcristh0/jupyterlab:gpu" data-desc="GPU-enabled JupyterLab with CUDA 12 support">danielcristh0/jupyterlab:gpu</option>
+      </select>
+      <div id="image-info" class="info-message"></div>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="use-random" checked />
+        <label for="use-random">Use Random Node</label>
+      </div>
+
+      <div id="manual-node-select" style="display: none; margin-top: 1em;">
+        <label for="node-select">Select a Node:</label>
+        <select id="node-select" name="node-select">
+          <option value="">-- Select Node --</option>
+        </select>
+      </div>
+
+      <label>Node Selection:</label>
+      <div id="node-status" class="loading">Loading node information...</div>
+
+      <input type="hidden" name="node" id="input-node" />
+      <input type="hidden" name="node_ip" id="input-node-ip" />
+
+      <div class="center-button">
+        <button type="submit" class="start-button">Start JupyterLab Server</button>
+      </div>
+
+      <div id="debug-info" style="display: none;"></div>
+    </fieldset>
+  </form>
+  <script>
+    document.querySelector("form").addEventListener("submit", function (e) {
+      const nodeInput = document.getElementById("input-node");
+      const nodeIpInput = document.getElementById("input-node-ip");
+      const useRandom = document.getElementById("use-random").checked;
+      const selectedHostname = document.getElementById("node-select").value;
+
+      if (!nodeInput.value || !nodeIpInput.value) {
+        if (!useRandom && selectedHostname) {
+          const node = availableNodes.find(n => n.hostname === selectedHostname);
+          if (node) {
+            updateNodeDetails(node);
+          } else {
+            e.preventDefault();
+            alert("Node tidak valid. Silakan pilih ulang.");
+            return false;
+          }
+        } else {
+          e.preventDefault();
+          alert("Node belum siap atau Discovery API masih loading.");
+          return false;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

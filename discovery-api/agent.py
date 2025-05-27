@@ -6,11 +6,14 @@ import docker
 import time
 import gpustat
 from datetime import datetime
+from dotenv import load_dotenv
 
-DISCOVERY_URL = os.environ.get("DISCOVERY_URL", "http://192.168.100.246:15002/register-node")
+load_dotenv()
+
+DISCOVERY_URL = os.environ.get("DISCOVERY_URL", "http://127.0.0.1:15002/register-node")
 
 def register():
-    print("[DEBUG] Mulai register node...")
+    print("[DEBUG] adding node...")
     payload = collect_node_info()
     if payload:
         print(f"[DEBUG] Send Info: {payload}")

@@ -6,7 +6,7 @@ services:
     container_name: proxy
     networks:
       - jupyterhub-network
-    # expose the proxy to the world, heal yeah
+    # Expose the proxy to the world, heal yeah
     ports:
       - "18081:8000"
     expose:
@@ -23,11 +23,15 @@ services:
       - "--api-port=8001"
       - "--error-target=http://hub:18000/hub/error"
       - "--log-level=info"
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8000/hub/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+      - "--default-target=http://hub:18000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/hub/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - hub
+
   hub:
     build:
       context: .
@@ -38,18 +42,23 @@ services:
     networks:
       - jupyterhub-network
     volumes:
-      # The JupyterHub configuration file
       - "./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "jupyterhub-data:/data"
       - "shared-data:/home/jovyan/shared"
+      - "./data:/srv/jupyterhub/data"
     user: root
     command: jupyterhub --config /srv/jupyterhub/jupyterhub_config.py
     ports:
       - "18000:18000"
     env_file: .env
-    depends_on:
-      - proxy
+    environment:
+      - JUPYTERHUB_SPAWNER_CLASS=PatchedMultiNodeSpawner
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18000/hub/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   jupyterhub-data:
@@ -58,3 +67,6 @@ volumes:
 networks:
   jupyterhub-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.99.0.0/16

@@ -60,3 +60,6 @@ netics
 
 # Old Project
 infra/
+
+# Docker
+data/

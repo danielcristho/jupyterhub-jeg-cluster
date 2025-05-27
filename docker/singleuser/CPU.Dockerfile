@@ -1,43 +1,91 @@
 # syntax=docker/dockerfile:1.3
 
-FROM python:3.12-slim
+FROM jupyter/base-notebook:latest
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    NB_USER=jovyan \
-    NB_UID=1000 \
-    HOME=/home/jovyan \
-    RAY_ADDRESS=ray://10.21.73.122:10001
+USER root
 
-# Create user
-RUN adduser \
-    --disabled-password \
-    --gecos "Default user" \
-    --uid ${NB_UID} \
-    --home ${HOME} \
-    --force-badname \
-    ${NB_USER}
-
-# Install deps
+# Install OS dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git tini curl && \
+    git curl net-tools tini && \
     rm -rf /var/lib/apt/lists/*
 
-# Install JupyterLab and Ray
+# FIX: Upgrade JupyterHub to match hub version (5.3.0)
+RUN pip install --upgrade jupyterhub==5.3.0
+
+# Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Add Ray autoconnect script
-COPY 00-ray-init.py /usr/local/share/jupyter/startup/00-ray-init.py
+# Create Jupyter config directory
+RUN mkdir -p /opt/conda/etc/jupyter
 
-# Set up IPython startup
-RUN mkdir -p ${HOME}/.ipython/profile_default/startup && \
-    cp /usr/local/share/jupyter/startup/00-ray-init.py ${HOME}/.ipython/profile_default/startup/
+# CRITICAL: Add Jupyter server configuration to force bind to 0.0.0.0
+RUN echo "c.ServerApp.ip = '0.0.0.0'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.port = 8888" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.allow_origin = '*'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.disable_check_xsrf = True" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.allow_remote_access = True" >> /opt/conda/etc/jupyter/jupyter_server_config.py
 
-# Set permissions
-RUN chown -R ${NB_USER}:${NB_USER} ${HOME}
+# Also add config for JupyterHub SingleUser
+RUN echo "c.SingleUserNotebookApp.ip = '0.0.0.0'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.SingleUserNotebookApp.port = 8888" >> /opt/conda/etc/jupyter/jupyter_server_config.py
 
-USER ${NB_USER}
-WORKDIR ${HOME}
+# Create user-level config as backup
+RUN mkdir -p /home/jovyan/.jupyter && \
+    echo "c.ServerApp.ip = '0.0.0.0'" >> /home/jovyan/.jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.port = 8888" >> /home/jovyan/.jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.allow_origin = '*'" >> /home/jovyan/.jupyter/jupyter_server_config.py && \
+    chown -R jovyan:users /home/jovyan/.jupyter
+
+# Optional: Ray autoconnect startup (if you're using Ray)
+# COPY 00-ray-init.py /usr/local/share/jupyter/startup/00-ray-init.py
+
+USER ${NB_UID}
+
+WORKDIR /home/jovyan
 
 EXPOSE 8888
-ENTRYPOINT ["jupyterhub-singleuser"]
+
+ENTRYPOINT ["tini", "--"]
+CMD ["start-singleuser.sh"]# syntax=docker/dockerfile:1.3
+
+FROM jupyter/base-notebook:latest
+
+USER root
+
+# Install OS dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl net-tools tini && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Create Jupyter config directory
+RUN mkdir -p /opt/conda/etc/jupyter
+
+# Add Jupyter server configuration to force bind to 0.0.0.0
+RUN echo "c.ServerApp.ip = '0.0.0.0'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.port = 8888" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.allow_origin = '*'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
+    echo "c.ServerApp.disable_check_xsrf = True" >> /opt/conda/etc/jupyter/jupyter_server_config.py
+
+# Also create config for notebook (legacy support)
+RUN echo "c.NotebookApp.ip = '0.0.0.0'" >> /opt/conda/etc/jupyter/jupyter_notebook_config.py && \
+    echo "c.NotebookApp.port = 8888" >> /opt/conda/etc/jupyter/jupyter_notebook_config.py && \
+    echo "c.NotebookApp.allow_origin = '*'" >> /opt/conda/etc/jupyter/jupyter_notebook_config.py
+
+# Optional: Ray autoconnect startup (if you're using Ray)
+# COPY 00-ray-init.py /usr/local/share/jupyter/startup/00-ray-init.py
+
+USER ${NB_UID}
+
+WORKDIR /home/jovyan
+
+EXPOSE 8888
+
+ENTRYPOINT ["tini", "--"]
+CMD ["start-singleuser.sh"]
