@@ -136,12 +136,15 @@ class MultiNodeSpawner(DockerSpawner):
 
     def start_object(self):
         """Override the actual container start to force port binding"""
+        # Get the container info
         container_info = self.client.inspect_container(self.container_id)
         self.log.info(f"[START_OBJECT] Container info: {container_info}")
 
+        # Force restart with correct port binding if needed
         current_ports = container_info.get('HostConfig', {}).get('PortBindings', {})
         self.log.info(f"[START_OBJECT] Current port bindings: {current_ports}")
 
+        # Call parent start
         result = super().start_object() if hasattr(super(), 'start_object') else None
 
         return result
@@ -153,18 +156,14 @@ class MultiNodeSpawner(DockerSpawner):
             self.extra_host_config = {}
 
         self.extra_host_config['port_bindings'] = {8888: None}
-
         self.extra_host_config['publish_all_ports'] = True
-
         self.extra_host_config.pop('network_mode', None)
-
         self.log.info(f"[CREATE_OBJECT] Final extra_host_config: {self.extra_host_config}")
 
         if hasattr(self, 'get_args'):
             args = self.get_args()
             self.log.info(f"[CREATE_OBJECT] DockerSpawner args: {args}")
 
-        # Call parent method
         return super().create_object()
 
     async def start(self):
@@ -177,16 +176,11 @@ class MultiNodeSpawner(DockerSpawner):
         if not node_ip or node_ip in ['127.0.0.1', 'localhost', '0.0.0.0']:
             raise ValueError(f"Invalid or missing remote node IP: {node_ip}")
 
-        # Update connection settings before accessing client
         self.host = f"tcp://{node_ip}:2375"
         self.tls_config = {}
         self.use_internal_ip = False
         self.image = image
-
-        # Reset client to force recreation with new host
         self._client = None
-
-        # get the new client
         client = self.client
         self.log.info(f"[DEBUG] Docker client: {client.base_url}")
         self.log.info(f"[DEBUG] Docker host to be used: {self.host}")
@@ -196,33 +190,45 @@ class MultiNodeSpawner(DockerSpawner):
 
         self.environment.update({
             'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',
+            'JUPYTERHUB_BASE_URL': '/',
+            'JUPYTERHUB_SERVICE_PREFIX': f'/user/{self.user.name}/',
+            'JUPYTERHUB_USER': self.user.name,
+            'JUPYTERHUB_CLIENT_ID': f'jupyterhub-user-{self.user.name}',
+            'JUPYTERHUB_API_TOKEN': self.api_token,
         })
 
         self.args = [
-            '--ip=0.0.0.0',
-            '--port=8888',
+            # '--ip=0.0.0.0',
+            # '--port=8888',
             '--ServerApp.ip=0.0.0.0',
             '--ServerApp.port=8888',
             '--ServerApp.allow_origin=*',
             '--ServerApp.disable_check_xsrf=True'
         ]
 
-        # self.cmd = []
+        self.environment.update({
+            'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',
+            'JUPYTERHUB_SERVICE_URL': f'http://{hub_ip}:18000',
+            'JUPYTERHUB_BASE_URL': '/',
+            'JUPYTERHUB_SERVICE_PREFIX': f'/user/{self.user.name}/',
+            'JUPYTERHUB_USER': self.user.name,
+            'JUPYTERHUB_API_TOKEN': self.api_token,
+        })
+
+        # self.cmd = [
+        #     'sh', '-c',
+        #     f'exec jupyterhub-singleuser --ip 0.0.0.0 --port 8888 --ServerApp.base_url=/user/{self.user.name}/'
+        # ]
+
         self.log.info(f"[DEBUG] Current extra_host_config: {self.extra_host_config}")
 
         if any(x in image for x in ["gpu", "cu", "tf", "rpl"]):
-            self.extra_host_config["runtime"] = "nvidia"
+            self.extra_host_config = {"runtime": "nvidia"}
         else:
-            self.extra_host_config.pop("runtime", None)
-
-        self.extra_host_config.pop("port_bindings", None)
-        self.extra_host_config.pop("publish_all_ports", None)
-
-        self.extra_host_config.pop("port_bindings", None)
-        self.extra_host_config.pop("publish_all_ports", None)
+            self.extra_host_config = {}
 
         self.extra_host_config.update({
-            "network_mode": "host",
+            "port_bindings": {8888: None},
             "extra_hosts": {
                 "hub": "192.168.122.1",
                 "jupyterhub": "192.168.122.1"
@@ -237,7 +243,6 @@ class MultiNodeSpawner(DockerSpawner):
         self.log.info(f"[DEBUG] extra_host_config before start: {self.extra_host_config}")
         self.log.info(f"[DEBUG] Host: {self.host}")
 
-        # Log ALL spawner config for debugging
         self.log.info(f"[DEBUG] self.port: {getattr(self, 'port', 'NOT_SET')}")
         self.log.info(f"[DEBUG] self.use_internal_ip: {getattr(self, 'use_internal_ip', 'NOT_SET')}")
         self.log.info(f"[DEBUG] self.host_ip: {getattr(self, 'host_ip', 'NOT_SET')}")
@@ -247,9 +252,10 @@ class MultiNodeSpawner(DockerSpawner):
         self.log.info(f"[DEBUG] Container spawned on: {self.host}")
         self.log.info(f"[DEBUG] Container ID: {container_id}")
 
-        # wait container full start
+        # Let container fully start
         await asyncio.sleep(15)
 
+        # Check container status
         container = self.client.inspect_container(self.container_id)
         container_state = container.get("State", {})
         self.log.info(f"[DEBUG] Container state: {container_state}")
@@ -267,7 +273,6 @@ class MultiNodeSpawner(DockerSpawner):
         self.log.info(f"[DEBUG] Container ports: {ports}")
 
         if "8888/tcp" not in ports or not ports["8888/tcp"]:
-            # Try to get container logs for debugging
             logs = self.client.logs(self.container_id, tail=50).decode('utf-8')
             self.log.error(f"[ERROR] Port 8888 not exposed. Container logs:\n{logs}")
             raise Exception("Port 8888 not exposed or not found")

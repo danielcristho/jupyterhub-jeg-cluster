@@ -1,36 +1,50 @@
 # syntax=docker/dockerfile:1.3
 
-FROM jupyter/base-notebook:latest
+FROM python:3.11-slim-bookworm
 
-USER root
+ENV DEBIAN_FRONTEND=noninteractive \
+    NB_USER=jovyan \
+    NB_UID=1000 \
+    HOME=/home/jovyan
 
+# Create user
+RUN adduser \
+    --disabled-password \
+    --gecos "Default user" \
+    --uid ${NB_UID} \
+    --home ${HOME} \
+    --force-badname \
+    ${NB_USER}
+
+# Install deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl net-tools tini && \
+    git tini curl && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Create Jupyter config directory
-RUN mkdir -p /opt/conda/etc/jupyter
+RUN find /opt/conda -name "*jupyter*config*" -type f -delete 2>/dev/null || true && \
+    find /usr/local -name "*jupyter*config*" -type f -delete 2>/dev/null || true && \
+    find /etc -name "*jupyter*config*" -type f -delete 2>/dev/null || true && \
+    rm -rf /opt/conda/etc/jupyter* /usr/local/etc/jupyter* /etc/jupyter* || true
 
-RUN echo "c.ServerApp.ip = '0.0.0.0'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
-    echo "c.ServerApp.port = 8888" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
-    echo "c.ServerApp.allow_origin = '*'" >> /opt/conda/etc/jupyter/jupyter_server_config.py && \
-    echo "c.ServerApp.disable_check_xsrf = True" >> /opt/conda/etc/jupyter/jupyter_server_config.py
+# Add Ray autoconnect script
+COPY 00-ray-init.py /usr/local/share/jupyter/startup/00-ray-init.py
 
-RUN echo "c.NotebookApp.ip = '0.0.0.0'" >> /opt/conda/etc/jupyter/jupyter_notebook_config.py && \
-    echo "c.NotebookApp.port = 8888" >> /opt/conda/etc/jupyter/jupyter_notebook_config.py && \
-    echo "c.NotebookApp.allow_origin = '*'" >> /opt/conda/etc/jupyter/jupyter_notebook_config.py
+# Set up IPython startup
+RUN mkdir -p ${HOME}/.ipython/profile_default/startup && \
+    cp /usr/local/share/jupyter/startup/00-ray-init.py ${HOME}/.ipython/profile_default/startup/
 
-# COPY 00-ray-init.py /usr/local/share/jupyter/startup/00-ray-init.py
+# Set permissions
+RUN chown -R ${NB_USER}:${NB_USER} ${HOME}
+RUN rm -rf /home/jovyan/.jupyter* || true
 
-USER ${NB_UID}
 
-WORKDIR /home/jovyan
+USER ${NB_USER}
+
+WORKDIR ${HOME}
 
 EXPOSE 8888
-
 ENTRYPOINT ["tini", "--"]
-CMD ["start-singleuser.sh"]
+CMD ["sh", "-c", "JUPYTER_CONFIG_DIR=/dev/null JUPYTER_CONFIG_PATH=/dev/null exec jupyterhub-singleuser --ip=0.0.0.0 --port=8888"]

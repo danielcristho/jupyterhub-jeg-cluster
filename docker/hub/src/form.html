@@ -132,7 +132,7 @@
 
       const suitableNodes = availableNodes.filter(n => useGpu ? n.has_gpu : true);
       if (suitableNodes.length === 0) {
-        nodeStatus.innerHTML = `<div class='error-message'>No suitable nodes found.</div>`;
+        nodeStatus.innerHTML = `<div class='error-message'>Node tidak support penggunaan GPU.</div>`;
         return;
       }
 
@@ -214,8 +214,8 @@
 
       <label for="image">Docker Image:</label>
       <select name="image" id="image-select" required>
-        <option value="danielcristh0/jupyterlab:cpu" data-desc="CPU-only JupyterLab for basic tasks">danielcristh0/jupyterlab:cpu</option>
-        <option value="danielcristh0/jupyterlab:gpu" data-desc="GPU-enabled JupyterLab with CUDA 12 support">danielcristh0/jupyterlab:gpu</option>
+        <option value="danielcristh0/jupyterlab:cpu" data-desc="CPU-only JupyterLab for basic tasks (include numpy, pandas, matplotlib)">danielcristh0/jupyterlab:cpu</option>
+        <option value="danielcristh0/jupyterlab:gpu" data-desc="GPU-enabled JupyterLab with CUDA 12 support (include torch)">danielcristh0/jupyterlab:gpu</option>
       </select>
       <div id="image-info" class="info-message"></div>
 
@@ -263,7 +263,7 @@
           }
         } else {
           e.preventDefault();
-          alert("Node belum siap atau Discovery API masih loading.");
+          alert("Node belum siap atau Discovery API masih belum bisa diakses.");
           return false;
         }
       }

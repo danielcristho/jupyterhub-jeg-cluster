@@ -67,6 +67,9 @@ c.DockerSpawner.volumes = {
 c.DockerSpawner.cpu_limit = 2.0
 c.DockerSpawner.mem_limit = '4G'
 
+c.Spawner.default_url = '/lab'
+c.Spawner.disable_user_config = True
+
 # ------------------------------------------------------------------------------
 # Hub Setup
 # ------------------------------------------------------------------------------
@@ -81,8 +84,10 @@ c.ConfigurableHTTPProxy.api_url = 'http://proxy:8001'
 c.ConfigurableHTTPProxy.auth_token = os.environ["CONFIGPROXY_AUTH_TOKEN"]
 
 c.JupyterHub.db_url = "sqlite:///data/jupyterhub.sqlite"
-
 c.JupyterHub.cookie_secret_file = '/data/jupyterhub_cookie_secret'
+
+c.JupyterHub.redirect_to_server = False
+c.JupyterHub.implicit_spawn_seconds = 1
 
 # ------------------------------------------------------------------------------
 # Authentication

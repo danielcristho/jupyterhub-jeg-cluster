@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.3
+# FROM python:3.12-slim
 FROM quay.io/jupyter/base-notebook:hub-5.3.0
 
 USER root
@@ -30,7 +31,6 @@ RUN pip install --upgrade pip setuptools wheel \
 COPY --chown=1000:100 jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
 COPY --chown=1000:100 spawner/ /srv/jupyterhub/spawner/
 COPY --chown=1000:100 .env /srv/jupyterhub/.env
-
 COPY --chown=1000:100 src /srv/jupyterhub/src
 
 WORKDIR /srv/jupyterhub
