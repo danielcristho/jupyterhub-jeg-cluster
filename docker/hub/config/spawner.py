@@ -42,10 +42,8 @@ def configure_spawner(c):
     c.DockerSpawner.cpu_limit = 2.0
     c.DockerSpawner.mem_limit = '4G'
 
-    # CRITICAL: Set default_url properly
     c.Spawner.default_url = '/lab'
     c.Spawner.disable_user_config = True
 
-    # FIXED: Add these settings to prevent redirect loops
     c.DockerSpawner.remove = True  # Remove container when stopped
     c.DockerSpawner.debug = True
