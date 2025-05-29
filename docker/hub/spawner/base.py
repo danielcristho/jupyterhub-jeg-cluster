@@ -43,7 +43,7 @@ class MultiNodeSpawner(DockerSpawner):
 
     @property
     def client(self):
-        """Override client property to ensure we use the updated Docker client"""
+        """Override client property to ensure use the updated Docker client"""
         if not hasattr(self, '_client') or self._client is None:
             self._client = self._get_client()
         elif hasattr(self, '_client') and self._client.base_url != self.host:
@@ -65,6 +65,33 @@ class MultiNodeSpawner(DockerSpawner):
             self.log.error(f"[DOCKER_CLIENT] Failed to connect to {self.host}: {e}")
             raise
 
+    # Single get_ip_and_port method, async version
+    async def get_ip_and_port(self):
+        """Override to return remote server IP and port"""
+        if hasattr(self, 'server_ip') and hasattr(self, 'server_port') and self.server_ip and self.server_port:
+            result = (self.server_ip, int(self.server_port))
+            self.log.info(f"[GET_IP_PORT_OVERRIDE] Using: {result}")
+            return result
+
+        # Call parent method if it's async
+        if hasattr(super(), 'get_ip_and_port') and asyncio.iscoroutinefunction(super().get_ip_and_port):
+            result = await super().get_ip_and_port()
+        else:
+            result = (self.ip, self.port)
+
+        self.log.info(f"[GET_IP_PORT_DEFAULT] Using: {result}")
+        return result
+
+    def _get_ip_and_port(self):
+        """Override internal method that DockerSpawner might use (sync version)"""
+        if hasattr(self, 'server_ip') and hasattr(self, 'server_port') and self.server_ip and self.server_port:
+            result = (self.server_ip, int(self.server_port))
+            self.log.info(f"[_GET_IP_PORT_OVERRIDE] Using: {result}")
+            return result
+        result = super()._get_ip_and_port() if hasattr(super(), '_get_ip_and_port') else (self.ip, self.port)
+        self.log.info(f"[_GET_IP_PORT_DEFAULT] Using: {result}")
+        return result
+
     @property
     def url(self):
         """Override URL to ensure it points to remote server"""
@@ -83,29 +110,6 @@ class MultiNodeSpawner(DockerSpawner):
             return url
         return super().server_url
 
-    def _get_ip_and_port(self):
-        """Override internal method that DockerSpawner might use"""
-        if hasattr(self, 'server_ip') and hasattr(self, 'server_port') and self.server_ip and self.server_port:
-            result = (self.server_ip, int(self.server_port))
-            self.log.info(f"[_GET_IP_PORT_OVERRIDE] Using: {result}")
-            return result
-        result = super()._get_ip_and_port() if hasattr(super(), '_get_ip_and_port') else (self.ip, self.port)
-        self.log.info(f"[_GET_IP_PORT_DEFAULT] Using: {result}")
-        return result
-
-    async def get_ip_and_port(self):
-        """Override async version if it exists"""
-        if hasattr(self, 'server_ip') and hasattr(self, 'server_port') and self.server_ip and self.server_port:
-            result = (self.server_ip, int(self.server_port))
-            self.log.info(f"[ASYNC_GET_IP_PORT_OVERRIDE] Using: {result}")
-            return result
-        if hasattr(super(), 'get_ip_and_port') and asyncio.iscoroutinefunction(super().get_ip_and_port):
-            result = await super().get_ip_and_port()
-        else:
-            result = (self.ip, self.port)
-        self.log.info(f"[ASYNC_GET_IP_PORT_DEFAULT] Using: {result}")
-        return result
-
     def _set_docker_client(self, client=None):
         """Set Docker client - kept for compatibility but use _get_client instead"""
         if client:
@@ -114,33 +118,12 @@ class MultiNodeSpawner(DockerSpawner):
             self._client = self._get_client()
         return self._client
 
-    def get_ip_and_port(self):
-        """Override to return remote server IP and port"""
-        if hasattr(self, 'server_ip') and hasattr(self, 'server_port') and self.server_ip and self.server_port:
-            result = (self.server_ip, int(self.server_port))
-            self.log.info(f"[GET_IP_PORT_OVERRIDE] Using: {result}")
-            return result
-        result = super().get_ip_and_port()
-        self.log.info(f"[GET_IP_PORT_DEFAULT] Using: {result}")
-        return result
-
-    def get_ip_and_port(self):
-        """Override to return remote server IP and port (sync version)"""
-        if hasattr(self, 'server_ip') and hasattr(self, 'server_port') and self.server_ip and self.server_port:
-            result = (self.server_ip, int(self.server_port))
-            self.log.info(f"[SYNC_GET_IP_PORT_OVERRIDE] Using: {result}")
-            return result
-        result = super().get_ip_and_port()
-        self.log.info(f"[SYNC_GET_IP_PORT_DEFAULT] Using: {result}")
-        return result
-
     def start_object(self):
         """Override the actual container start to force port binding"""
         # Get the container info
         container_info = self.client.inspect_container(self.container_id)
         self.log.info(f"[START_OBJECT] Container info: {container_info}")
 
-        # Force restart with correct port binding if needed
         current_ports = container_info.get('HostConfig', {}).get('PortBindings', {})
         self.log.info(f"[START_OBJECT] Current port bindings: {current_ports}")
 
@@ -186,7 +169,7 @@ class MultiNodeSpawner(DockerSpawner):
         self.log.info(f"[DEBUG] Docker host to be used: {self.host}")
         self.log.info(f"[DEBUG] CONNECTED TO: {client.base_url}")
 
-        hub_ip = "192.168.122.1"
+        hub_ip = "hub"  # Use container name instead of IP
 
         self.environment.update({
             'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',
@@ -195,30 +178,17 @@ class MultiNodeSpawner(DockerSpawner):
             'JUPYTERHUB_USER': self.user.name,
             'JUPYTERHUB_CLIENT_ID': f'jupyterhub-user-{self.user.name}',
             'JUPYTERHUB_API_TOKEN': self.api_token,
+            'JUPYTERHUB_SERVICE_URL': f'http://{hub_ip}:18000',
         })
 
         self.args = [
-            # '--ip=0.0.0.0',
-            # '--port=8888',
             '--ServerApp.ip=0.0.0.0',
             '--ServerApp.port=8888',
             '--ServerApp.allow_origin=*',
-            '--ServerApp.disable_check_xsrf=True'
+            '--ServerApp.disable_check_xsrf=True',
+            f'--ServerApp.base_url=/user/{self.user.name}/',
+            '--ServerApp.allow_remote_access=True',
         ]
-
-        self.environment.update({
-            'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',
-            'JUPYTERHUB_SERVICE_URL': f'http://{hub_ip}:18000',
-            'JUPYTERHUB_BASE_URL': '/',
-            'JUPYTERHUB_SERVICE_PREFIX': f'/user/{self.user.name}/',
-            'JUPYTERHUB_USER': self.user.name,
-            'JUPYTERHUB_API_TOKEN': self.api_token,
-        })
-
-        # self.cmd = [
-        #     'sh', '-c',
-        #     f'exec jupyterhub-singleuser --ip 0.0.0.0 --port 8888 --ServerApp.base_url=/user/{self.user.name}/'
-        # ]
 
         self.log.info(f"[DEBUG] Current extra_host_config: {self.extra_host_config}")
 
@@ -236,17 +206,9 @@ class MultiNodeSpawner(DockerSpawner):
         })
 
         self.log.info(f"[DEBUG] Updated extra_host_config: {self.extra_host_config}")
-
-        # self.extra_create_kwargs = {}
-
         self.log.info(f"[DEBUG] About to start container with image: {self.image}")
         self.log.info(f"[DEBUG] extra_host_config before start: {self.extra_host_config}")
         self.log.info(f"[DEBUG] Host: {self.host}")
-
-        self.log.info(f"[DEBUG] self.port: {getattr(self, 'port', 'NOT_SET')}")
-        self.log.info(f"[DEBUG] self.use_internal_ip: {getattr(self, 'use_internal_ip', 'NOT_SET')}")
-        self.log.info(f"[DEBUG] self.host_ip: {getattr(self, 'host_ip', 'NOT_SET')}")
-        self.log.info(f"[DEBUG] DockerSpawner network_name: {getattr(self, 'network_name', 'NOT_SET')}")
 
         container_id = await super().start()
         self.log.info(f"[DEBUG] Container spawned on: {self.host}")
@@ -282,6 +244,7 @@ class MultiNodeSpawner(DockerSpawner):
         self.port = int(host_port)
         self.server_ip = node_ip
         self.server_port = str(host_port)
+
         self.log.info(f"[REMOTE-CONTAINER] Jupyter running at http://{self.ip}:{self.port}")
         self.log.info(f"[REMOTE-CONTAINER] server_url = {self.server_url}")
         self.log.info(f"[SETUP] self.ip = {self.ip}")

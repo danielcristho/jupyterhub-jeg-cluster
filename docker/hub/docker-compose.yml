@@ -6,9 +6,8 @@ services:
     container_name: proxy
     networks:
       - jupyterhub-network
-    # Expose the proxy to the world, heal yeah
     ports:
-      - "18081:8000"
+      - "18000:8000"
     expose:
       - "8001"
     restart: unless-stopped
@@ -21,11 +20,11 @@ services:
       - "--port=8000"
       - "--api-ip=0.0.0.0"
       - "--api-port=8001"
-      - "--error-target=http://hub:18000/hub/error"
+      - "--error-target=http://hub:8081/hub/error"
       - "--log-level=info"
-      - "--default-target=http://hub:18000"
+      - "--default-target=http://hub:8081"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/hub/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,13 +48,13 @@ services:
       - "./data:/srv/jupyterhub/data"
     user: root
     command: jupyterhub --config /srv/jupyterhub/jupyterhub_config.py
-    ports:
-      - "18000:18000"
+    expose:
+      - "8081"
     env_file: .env
     environment:
       - JUPYTERHUB_SPAWNER_CLASS=PatchedMultiNodeSpawner
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18000/hub/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/hub/health"]
       interval: 30s
       timeout: 10s
       retries: 3

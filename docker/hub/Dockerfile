@@ -30,8 +30,9 @@ RUN pip install --upgrade pip setuptools wheel \
 
 COPY --chown=1000:100 jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
 COPY --chown=1000:100 spawner/ /srv/jupyterhub/spawner/
+COPY --chown=1000:100 config/ /srv/jupyterhub/config/
+COPY --chown=1000:100 form /srv/jupyterhub/form
 COPY --chown=1000:100 .env /srv/jupyterhub/.env
-COPY --chown=1000:100 src /srv/jupyterhub/src
 
 WORKDIR /srv/jupyterhub
 
