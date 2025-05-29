@@ -1,10 +1,10 @@
 """Integrates server option form and images validation"""
 
 import os
-from spawner.multinode import MultiNodeSpawner  # Fixed import
+from spawner.multinode import MultiNodeSpawner
 
 def configure_spawner(c):
-    c.JupyterHub.spawner_class = MultiNodeSpawner  # Fixed class name
+    c.JupyterHub.spawner_class = MultiNodeSpawner
     c.Spawner.options_form = open("form/form.html").read()
 
     allowed_images = {
