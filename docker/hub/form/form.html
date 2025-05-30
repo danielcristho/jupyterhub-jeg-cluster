@@ -37,6 +37,26 @@
     .loading { text-align: center; margin: 20px 0; font-style: italic; color: #666; }
     .node-status { margin-top: 10px; padding: 8px; font-size: 0.9em; }
 
+    select option:disabled {
+      color: #999 !important;
+      background-color: #f5f5f5 !important;
+      font-style: italic;
+    }
+
+    .node-unavailable {
+      color: #dc2626;
+      background-color: #fef2f2;
+    }
+
+    .node-warning {
+      color: #d97706;
+      background-color: #fffbeb;
+    }
+
+    .node-available {
+      color: #059669;
+      background-color: #ecfdf5;
+    }
     .checkbox-container {
       display: flex;
       align-items: center;
@@ -67,7 +87,7 @@
   </style>
   <script>
     let availableNodes = [];
-    const DISCOVERY_API_URL = "http://192.168.122.1:15002";
+    const DISCOVERY_API_URL = "http://192.168.122.1:15002/";
 
     window.onload = async function () {
       await checkApiStatus();
@@ -88,8 +108,19 @@
 
       const nodeDropdown = document.getElementById("node-select");
       nodeDropdown.addEventListener("change", () => {
-        const selected = availableNodes.find(n => n.hostname === nodeDropdown.value);
-        if (selected) updateNodeDetails(selected);
+        const selectedValue = nodeDropdown.value;
+        if (!selectedValue) {
+          document.getElementById("node-status").innerHTML = `<div class='info-message'>Select a node from dropdown above. 🔴 = Unavailable, 🟡 = Warning, 🟢 = Available</div>`;
+          return;
+        }
+
+        const selected = availableNodes.find(n => n.hostname === selectedValue);
+        if (selected) {
+          updateNodeDetails(selected);
+        } else {
+          nodeDropdown.value = ""; // Reset selection
+          document.getElementById("node-status").innerHTML = `<div class='error-message'>Selected node is not available. Please choose another node.</div>`;
+        }
       });
 
       updateImageInfo(imageSelect.value);
@@ -130,34 +161,84 @@
         return;
       }
 
-      const suitableNodes = availableNodes.filter(n => useGpu ? n.has_gpu : true);
-      if (suitableNodes.length === 0) {
-        nodeStatus.innerHTML = `<div class='error-message'>Node tidak support penggunaan GPU.</div>`;
-        return;
-      }
-
       if (isRandom) {
+        // filter node yang healthy
+        const suitableNodes = availableNodes.filter(n => {
+          if (useGpu && !n.has_gpu) return false;
+          const totalActiveContainers = (n.active_jupyterlab || 0) + (n.active_ray || 0);
+          const cpuUsage = n.cpu_usage_percent || 0;
+          const memUsage = n.memory_usage_percent || 0;
+          return totalActiveContainers < 5 && cpuUsage <= 60 && memUsage <= 60;
+        });
+
+        if (suitableNodes.length === 0) {
+          const reason = useGpu ? "Node tidak support penggunaan GPU atau" : "Semua node";
+          nodeStatus.innerHTML = `<div class='error-message'>${reason} sedang overload (>60% CPU/Memory atau ≥5 containers).</div>`;
+          return;
+        }
+
         const selectedNode = suitableNodes.reduce((best, current) =>
           (current.memory_usage_percent || 100) < (best.memory_usage_percent || 100) ? current : best
         );
         updateNodeDetails(selectedNode);
       } else {
+        // manual dropdown, disable node yang tinggi load-nya
         const nodeSelect = document.getElementById("node-select");
         nodeSelect.innerHTML = `<option value="">-- Select Node --</option>`;
-        suitableNodes.forEach(n => {
+
+        availableNodes.forEach(n => {
+          // Cek apakah node suitable
+          const gpuSuitable = useGpu ? n.has_gpu : true;
+          const totalActiveContainers = (n.active_jupyterlab || 0) + (n.active_ray || 0);
+          const cpuUsage = n.cpu_usage_percent || 0;
+          const memUsage = n.memory_usage_percent || 0;
+          const isHealthy = totalActiveContainers < 5 && cpuUsage <= 60 && memUsage <= 60;
+          const isAvailable = gpuSuitable && isHealthy;
+
           const gpuInfo = n.gpu?.length > 0
             ? `${n.gpu[0].name} (${n.gpu[0].memory_used_mb}/${n.gpu[0].memory_total_mb}MB)`
             : "None";
-          const label = `${n.hostname} (${n.ip}) | CPU Usage: ${parseFloat(n.cpu_usage_percent || 0).toFixed(1)}% | RAM Usage: ${parseFloat(n.memory_usage_percent || 0).toFixed(1)}% | GPU: ${gpuInfo}`;
-          nodeSelect.innerHTML += `<option value="${n.hostname}">${label}</option>`;
+
+          // Status indicators
+          let statusIcon = "🟢";
+          let statusText = "";
+
+          if (!gpuSuitable) {
+            statusIcon = "❌";
+            statusText = " [GPU Required]";
+          } else if (totalActiveContainers >= 5) {
+            statusIcon = "🔴";
+            statusText = " [Too Many Containers]";
+          } else if (cpuUsage > 60 || memUsage > 60) {
+            statusIcon = "🔴";
+            statusText = " [High Usage]";
+          } else if (totalActiveContainers >= 3 || cpuUsage > 40 || memUsage > 40) {
+            statusIcon = "🟡";
+            statusText = " [Medium Load]";
+          }
+
+          const label = `${statusIcon} ${n.hostname} (${n.ip}) | CPU: ${parseFloat(cpuUsage).toFixed(1)}% | RAM: ${parseFloat(memUsage).toFixed(1)}%${statusText}`;
+
+          const option = document.createElement("option");
+          option.value = isAvailable ? n.hostname : "";
+          option.text = label;
+          option.disabled = !isAvailable;
+
+          // Style untuk disabled option
+          if (!isAvailable) {
+            option.style.color = "#999";
+            option.style.backgroundColor = "#f5f5f5";
+          }
+
+          nodeSelect.appendChild(option);
         });
-        nodeStatus.innerHTML = `<div class='info-message'>Select a node from dropdown above.</div>`;
+
+        nodeStatus.innerHTML = `<div class='info-message'>Select a node from dropdown above. 🔴 = Unavailable, 🟡 = Warning, 🟢 = Available</div>`;
       }
     }
 
     function updateNodeDetails(node) {
       const nodeStatus = document.getElementById("node-status");
-      const gpuStatus = node.has_gpu ? "GPU" : "CPU";
       const cpuUsage = parseFloat(node.cpu_usage_percent || 0).toFixed(1);
       const memUsage = parseFloat(node.memory_usage_percent || 0).toFixed(1);
       const ramGb = parseFloat(node.ram_gb || 0).toFixed(1);
@@ -165,10 +246,25 @@
         ? node.gpu.map(g => `${g.name} (${g.memory_used_mb}/${g.memory_total_mb}MB)`).join(", ")
         : "None";
 
+      // Container info dengan status indicators
+      const totalActiveContainers = (node.active_jupyterlab || 0) + (node.active_ray || 0);
+      const containerInfo = `
+        <strong>Containers:</strong>
+        JupyterLab: ${node.active_jupyterlab || 0} |
+        Ray: ${node.active_ray || 0} |
+        Total: ${node.total_containers || 0}
+      `;
+
+      // Status indicators
+      const cpuStatus = parseFloat(cpuUsage) > 60 ? "🔴" : parseFloat(cpuUsage) > 40 ? "🟡" : "🟢";
+      const memStatus = parseFloat(memUsage) > 60 ? "🔴" : parseFloat(memUsage) > 40 ? "🟡" : "🟢";
+      const containerStatus = totalActiveContainers >= 5 ? "🔴" : totalActiveContainers >= 3 ? "🟡" : "🟢";
+
       nodeStatus.innerHTML = `
         <div class='success-message node-status'>
           <strong>Selected Node: ${node.hostname}</strong><br>
-          CPU usage: ${cpuUsage}% of ${node.cpu} cores | RAM usage: ${memUsage}% of ${ramGb}GB<br>
+          ${cpuStatus} CPU usage: ${cpuUsage}% of ${node.cpu} cores | ${memStatus} RAM usage: ${memUsage}% of ${ramGb}GB<br>
+          ${containerStatus} ${containerInfo}<br>
           <strong>GPU:</strong> ${gpuDetail}<br>
           <small>IP: ${node.ip}</small>
         </div>
@@ -191,9 +287,32 @@
         availableNodes = nodes;
 
         const gpuNodes = availableNodes.filter(n => n.has_gpu).length;
+
+        // Filter untuk healthy nodes
+        const healthyNodes = availableNodes.filter(n => {
+          const totalActiveContainers = (n.active_jupyterlab || 0) + (n.active_ray || 0);
+          const cpuUsage = n.cpu_usage_percent || 0;
+          const memUsage = n.memory_usage_percent || 0;
+          return totalActiveContainers < 5 && cpuUsage <= 60 && memUsage <= 60;
+        });
+
+        // Container stats
+        const totalJupyter = availableNodes.reduce((sum, n) => sum + (n.active_jupyterlab || 0), 0);
+        const totalRay = availableNodes.reduce((sum, n) => sum + (n.active_ray || 0), 0);
+        const totalContainers = availableNodes.reduce((sum, n) => sum + (n.total_containers || 0), 0);
+
+        const statusIcon = healthyNodes.length > 0 ? "🟢" : "🔴";
+        const statusText = healthyNodes.length === availableNodes.length
+          ? "All nodes healthy"
+          : `${healthyNodes.length}/${availableNodes.length} nodes available`;
+
         summaryDiv.innerHTML = `<div class='info-message'>
-          <strong>Available Resources:</strong> ${availableNodes.length} nodes
-          (${gpuNodes} GPU, ${availableNodes.length - gpuNodes} CPU-only)
+          <strong>Cluster Status:</strong> ${statusIcon} ${statusText}
+          (${gpuNodes} GPU, ${availableNodes.length - gpuNodes} CPU-only)<br>
+          <strong>Running Containers:</strong>
+          JupyterLab: ${totalJupyter} |
+          Ray: ${totalRay} |
+          Total: ${totalContainers}
         </div>`;
 
         const imageSelect = document.getElementById("image-select");

@@ -1,7 +1,9 @@
-import os, asyncio, logging
+import os
+import asyncio
+import logging
+import docker
 from dockerspawner import DockerSpawner
 from traitlets import Unicode, Dict
-import docker
 
 class MultiNodeSpawner(DockerSpawner):
     host = Unicode("tcp://0.0.0.0:2375", config=True)
@@ -200,8 +202,8 @@ class MultiNodeSpawner(DockerSpawner):
         self.extra_host_config.update({
             "port_bindings": {8888: None},
             "extra_hosts": {
-                "hub": "192.168.122.1",
-                "jupyterhub": "192.168.122.1"
+                "hub": "10.21.73.116",
+                "jupyterhub": "10.21.73.116"
             }
         })
 

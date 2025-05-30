@@ -1,0 +1,20 @@
+{
+    "argv": [
+    "python",
+    "-m",
+    "ray_kernel",
+    "-f",
+    "{connection_file}"
+    ],
+    "display_name": "Ray Cluster",
+    "language": "python",
+    "interrupt_mode": "signal",
+    "env": {
+    "RAY_HEAD_ADDRESS": "192.168.1.100:10001",
+    "RAY_WORKER_NODES": "192.168.1.101,192.168.1.102",
+    "RAY_WORKER_IMAGE": "rayproject/ray:2.9.0"
+    },
+    "metadata": {
+        "description": "Ray Cluster kernel with auto-spawning workers"
+    }
+}
