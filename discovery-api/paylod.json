@@ -1,0 +1,41 @@
+[
+    {
+      "active_jupyterlab": 0,
+      "cpu": 4,
+      "cpu_usage_percent": 28.9,
+      "disk_usage_percent": 97.1,
+      "gpu": [],
+      "has_gpu": false,
+      "hostname": "chrstdan",
+      "ip": "10.125.177.108",
+      "is_in_use_by_jupyterhub": false,
+      "last_updated": "2025-05-28T20:43:29.559762Z",
+      "memory_usage_percent": 60.2,
+      "ram_gb": 18.79
+    },
+    {
+      "active_jupyterlab": 0,
+      "cpu": 24,
+      "cpu_usage_percent": 0.8,
+      "disk_usage_percent": 38.0,
+      "gpu": [
+        {
+          "index": 0,
+          "memory_total_mb": 12288,
+          "memory_used_mb": 1708,
+          "memory_util_percent": 13.9,
+          "name": "NVIDIA GeForce RTX 3080 Ti",
+          "temperature_gpu": 32,
+          "utilization_gpu_percent": 0,
+          "uuid": "GPU-56c3e796-124e-f059-16a8-f9be2b254ce0"
+        }
+      ],
+      "has_gpu": true,
+      "hostname": "rpl",
+      "ip": "10.21.73.122",
+      "is_in_use_by_jupyterhub": false,
+      "last_updated": "2025-05-28T20:43:09.290022Z",
+      "memory_usage_percent": 26.7,
+      "ram_gb": 67.11
+    }
+  ]

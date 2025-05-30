@@ -12,7 +12,7 @@ load_dotenv()
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "redis@pass")
-REDIS_EXPIRE_SECONDS = int(os.environ.get("REDIS_EXPIRE_SECONDS", 3600))
+REDIS_EXPIRE_SECONDS = int(os.environ.get("REDIS_EXPIRE_SECONDS", 45))
 
 print(f"[DEBUG] Connecting to Redis: {REDIS_HOST}:{REDIS_PORT}")
 
@@ -189,6 +189,30 @@ def get_node_by_hostname(hostname):
     except Exception as e:
         return jsonify({"error": f"Error retrieving node: {str(e)}"}), 500
 
+
+@app.route("/cluster-summary")
+def cluster_cluster():
+    """Get cluster summary of containers and resources too"""
+    if not redis_client:
+        return jsonify({"error": "Redis not available"}), 500
+
+    nodes = _load_nodes(filtered=False)
+
+    summary = {
+        "total_nodes": len(nodes),
+        "total_containers": {
+            "jupyterlab": sum(node.get("active_jupyterlab", 0) for node in nodes),
+            "ray": sum(node.get("active_ray", 0) for node in nodes),
+            "total": sum(node.get("total_containers", 0) for node in nodes),
+        },
+        "resource_usage": {
+            "avg_cpu": round(sum(node.get("cpu_usage_percent", 0) for node in nodes) / len(nodes), 2) if nodes else 0,
+            "avg_memory": round(sum(node.get("memory_usage_percent", 0) for node in nodes) / len(nodes), 2) if nodes else 0,
+        }
+    }
+
+    return jsonify(summary)
+
 def _load_nodes(filtered=True):
     if not redis_client:
         print("[ERROR] Redis client not available in _load_nodes")
@@ -223,6 +247,8 @@ def _load_nodes(filtered=True):
                     "memory_usage_percent": data.get("memory_usage_percent", 100),
                     "disk_usage_percent": data.get("disk_usage_percent", 100),
                     "active_jupyterlab": data.get("active_jupyterlab", 0),
+                    "active_ray": data.get("active_ray", 0),
+                    "total_containers": data.get("total_containers", 0),
                     "is_in_use_by_jupyterhub": data.get("active_jupyterlab", 0) > 0,
                     "last_updated": data.get("last_updated")
                 }
