@@ -108,3 +108,45 @@ def detect_amd_gpu():
     except Exception as e:
         print(f"[AMD DETECTION] Failed: {e}")
     return []
+
+def get_container_info():
+    """Get container details, count jupyter and ray congtainer"""
+    container_info = {
+        "jupyterlab_count": 0,
+        "ray_count": 0,
+        "total_count": 0,
+        "details": []
+    }
+
+    try:
+        docker_client = docker.from_env()
+        containers = docker_client.containers.list()
+        container_info["total_count"] = len(containers)
+
+        for container in containers:
+            container_name = container.name.lower()
+            container_image = container.image.tags[0] if container.image.tags else "unknown"
+
+            # Count jupy containers
+            if any(keyword in container_name for keyword in ["jupyter", "jupyterlab"]) or \
+                any(keyword in container_image.lower() for keyword in ["jupyter", "jupyterlab"]):
+                    container_info["jupyterlab_count"] += 1
+
+            # Count ray containers
+            if any(keyword in container_name for keyword in ["ray"]) or \
+                any(keyword in container_image.lower() for keyword in ["ray", "rayproject"]):
+                    container_info["ray_count"] += 1
+
+            print(f"[DEBUG] Container Summary: Total={container_info['total_count']}, "
+                  f"JupyterLab={container_info['jupyterlab_count']}, Ray={container_info['ray_count']}")
+
+    except Exception as e:
+        print(f"[DOCKER] Error getting container info: {e}")
+
+    return container_info
+
+
+if __name__ == "__main__":
+    while True:
+        register()
+        time.sleep(15)
