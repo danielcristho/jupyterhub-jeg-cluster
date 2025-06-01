@@ -5,8 +5,10 @@ import os
 def configure_hub(c):
     """Configure JupyterHub hub settings"""
 
-    c.JupyterHub.hub_bind_url = 'http://0.0.0.0:8081'
+    # PENTING: Port ini harus sama dengan yang digunakan di spawner
+    c.JupyterHub.hub_bind_url = 'http://0.0.0.0:18000'
 
+    # Hub IP untuk internal communication
     c.JupyterHub.hub_ip = 'hub'
 
     c.JupyterHub.db_url = 'sqlite:///data/jupyterhub.sqlite'
@@ -23,3 +25,7 @@ def configure_hub(c):
 
     c.JupyterHub.base_url = '/'
     c.JupyterHub.default_url = '/hub/home'
+
+    # TAMBAHAN: Untuk external access
+    c.JupyterHub.ip = '0.0.0.0'  # Allow external connections
+    c.JupyterHub.port = 8000      # Main JupyterHub port

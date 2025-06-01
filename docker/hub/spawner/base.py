@@ -171,7 +171,7 @@ class MultiNodeSpawner(DockerSpawner):
         self.log.info(f"[DEBUG] Docker host to be used: {self.host}")
         self.log.info(f"[DEBUG] CONNECTED TO: {client.base_url}")
 
-        hub_ip = "hub"  # Use container name instead of IP
+        hub_ip = "10.21.73.116"
 
         self.environment.update({
             'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',

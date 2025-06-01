@@ -10,9 +10,9 @@
     "language": "python",
     "interrupt_mode": "signal",
     "env": {
-    "RAY_HEAD_ADDRESS": "192.168.1.100:10001",
-    "RAY_WORKER_NODES": "192.168.1.101,192.168.1.102",
-    "RAY_WORKER_IMAGE": "rayproject/ray:2.9.0"
+    "RAY_HEAD_ADDRESS": "10.21.73.122:10001",
+    "RAY_WORKER_NODES": "10.21.73.116",
+    "RAY_WORKER_IMAGE": "danielcrist0/ray:rpl"
     },
     "metadata": {
         "description": "Ray Cluster kernel with auto-spawning workers"
