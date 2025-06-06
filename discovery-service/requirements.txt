@@ -1,0 +1,11 @@
+flask==3.1.0
+flask-cors
+Flask-SQLAlchemy<=3.1.1
+Flask-Migrate==4.1.0
+redis>=6.0.0
+# psycopg2<=2.9.10
+psycopg2-binary
+alembic==1.16.1
+python-dotenv
+psutil
+docker

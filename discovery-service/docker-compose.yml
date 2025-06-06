@@ -9,26 +9,39 @@ services:
     restart: unless-stopped
     ports:
       - "15002:15002"
-    # networks:
-    #   - jupyterhub-network
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 16379
       REDIS_PASSWORD: "redis@pass"
     depends_on:
       - redis
+      - postgres
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: discovery_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   redis:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
     volumes:
-      - data:/data
+      -  redis_data:/data
       - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     ports:
       - "16379:16379"
-    # networks:
-    #   - jupyterhub-network
     healthcheck:
       test: ["CMD", "redis-cli", "-p", "16379", "ping"]
       interval: 10s
@@ -36,10 +49,7 @@ services:
       retries: 3
 
 volumes:
-  data:
-
-# networks:
-#   jupyterhub-network:
-#     name: jupyterhub-network
+  postgres_data:
+  redis_data:
 
 
