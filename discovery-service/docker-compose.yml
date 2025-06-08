@@ -10,36 +10,61 @@ services:
     ports:
       - "15002:15002"
     environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: 'canopus'
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
       REDIS_HOST: redis
       REDIS_PORT: 16379
       REDIS_PASSWORD: "redis@pass"
+      REDIS_EXPIRE_SECONDS: 45
+
+      API_HOST: 0.0.0.0
+      API_PORT: 15002
+      DEBUG: "True"
+      SECRET_KEY: "secret-service111111"
     depends_on:
-      - redis
       - postgres
+      - redis
+    networks:
+      - discovery-network
+
   postgres:
     image: postgres:14-alpine
     container_name: postgres
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: discovery_db
+      POSTGRES_DB: ds
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      TZ: Asia/Jakarta
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U postgres -d discovery_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - discovery-network
+
   redis:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
     volumes:
-      -  redis_data:/data
+      - redis_data:/data
       - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    environment:
+      TZ: Asia/Jakarta
     ports:
       - "16379:16379"
     healthcheck:
@@ -47,9 +72,13 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    networks:
+      - discovery-network
 
 volumes:
   postgres_data:
   redis_data:
 
-
+networks:
+  discovery-network:
+    driver: bridge

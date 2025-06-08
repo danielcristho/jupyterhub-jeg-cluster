@@ -4,108 +4,129 @@ from flask_migrate import Migrate
 import logging
 import os
 
-# Import configurations and models
-from config import config
+# Import configuration
+from config import Config
+
+# Import models and database
 from models import db
 
-# Import route blueprints
-from routes.profiles import profiles_bp
-from routes.allocations import allocations_bp
-from routes.nodes import nodes_bp
+# Import blueprints
+from routes.node_routes import node_bp
+from routes.profile_routes import profile_bp
 
-def create_app(config_name=None):
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("DiscoveryAPI")
+
+def create_app():
     """Application factory pattern"""
-    if config_name is None:
-        config_name = os.environ.get('FLASK_ENV', 'development')
-
     app = Flask(__name__)
-    app.config.from_object(config[config_name])
 
-    # Enable CORS
-    CORS(app, origins="*")
+    # Load configuration
+    app.config.from_object(Config)
 
     # Initialize extensions
+    CORS(app, origins="*")
     db.init_app(app)
-    migrate = Migrate(app, db)
-
-    # Setup logging
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger("DiscoveryAPI")
+    Migrate(app, db)
 
     # Register blueprints
-    app.register_blueprint(profiles_bp, url_prefix='/api')
-    app.register_blueprint(allocations_bp, url_prefix='/api')
-    app.register_blueprint(nodes_bp)  # Legacy routes without /api prefix for backward compatibility
+    app.register_blueprint(node_bp, url_prefix='')
+    app.register_blueprint(profile_bp, url_prefix='')
 
-    # Create database tables
-    with app.app_context():
-        db.create_all()
-
-    # ===================== Core Routes ===================== #
-
+    # Health check route
     @app.route("/health-check")
     def health_check():
-        from redis_utils import redis_manager
-
-        redis_status = "connected" if redis_manager.is_connected() else "disconnected"
-
-        try:
-            # Test database connection
-            db.session.execute('SELECT 1')
-            db_status = "connected"
-        except Exception:
-            db_status = "disconnected"
+        from services.redis_service import RedisService
+        redis_service = RedisService()
 
         return jsonify({
             "status": "ok",
-            "message": "Hello, from [DiscoveryAPI] v2.0",
-            "redis_status": redis_status,
-            "database_status": db_status,
-            "redis_host": app.config['REDIS_HOST'],
-            "redis_port": app.config['REDIS_PORT'],
-            "database_uri": app.config['SQLALCHEMY_DATABASE_URI'].split('@')[1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else "hidden",
-            "available_endpoints": {
-                "legacy_routes": [
-                    "/health-check",
-                    "/register-node",
-                    "/all-nodes",
-                    "/available-nodes",
-                    "/jupyterhub-nodes",
-                    "/balanced-node",
-                    "/load-balancer-stats",
-                    "/debug-redis",
-                    "/node/<hostname>",
-                    "/cluster-summary"
-                ],
-                "new_api_routes": [
-                    "/api/profiles",
-                    "/api/allocate-nodes",
-                    "/api/deallocate-nodes",
-                    "/api/sessions",
-                    "/api/allocations"
-                ]
+            "message": "Hello, from [DiscoveryAPI]",
+            "database": {
+                "postgres": "connected" if db.engine else "disconnected",
+                "redis": "connected" if redis_service.is_connected() else "disconnected"
+            },
+            "config": {
+                "redis_host": Config.REDIS_HOST,
+                "redis_port": Config.REDIS_PORT,
+                "postgres_host": Config.POSTGRES_HOST,
+                "postgres_port": Config.POSTGRES_PORT
             }
         }), 200
 
-    # ===================== Error Handlers ===================== #
+    # Debug routes (remove in production)
+    @app.route("/debug-redis")
+    def debug_redis():
+        """Debug endpoint to check Redis status"""
+        from services.redis_service import RedisService
+        redis_service = RedisService()
 
-    @app.errorhandler(404)
-    def not_found(error):
-        return jsonify({"error": "Endpoint not found"}), 404
+        if not redis_service.is_connected():
+            return jsonify({"error": "Redis not available"}), 500
 
-    @app.errorhandler(500)
-    def internal_error(error):
-        db.session.rollback()
-        return jsonify({"error": "Internal server error"}), 500
+        try:
+            all_keys = redis_service.client.keys("*")
+            node_keys = redis_service.get_all_node_keys()
+
+            debug_info = {
+                "redis_connected": True,
+                "total_keys": len(all_keys),
+                "node_keys": node_keys,
+                "nodes_data": redis_service.get_all_nodes_data()
+            }
+
+            return jsonify(debug_info)
+        except Exception as e:
+            return jsonify({"error": f"Redis debug error: {str(e)}"}), 500
+
+    # Initialize database and default data
+    with app.app_context():
+        # Create tables if they don't exist
+        db.create_all()
+
+        # Initialize default profiles
+        from services.profile_service import ProfileService
+        try:
+            ProfileService.create_default_profiles()
+            logger.info("Default profiles initialized")
+        except Exception as e:
+            logger.error(f"Error initializing default profiles: {e}")
 
     return app
 
-# Create app instance
-app = create_app()
+def run_periodic_tasks(app):
+    """Run periodic maintenance tasks"""
+    import threading
+    import time
+
+    def cleanup_inactive_nodes():
+        with app.app_context():
+            from services.node_service import NodeService
+            from services.redis_service import RedisService
+
+            redis_service = RedisService()
+            node_service = NodeService(redis_service)
+
+            while True:
+                try:
+                    node_service.mark_nodes_inactive()
+                    logger.info("Cleaned up inactive nodes")
+                except Exception as e:
+                    logger.error(f"Error in cleanup task: {e}")
+
+                # Run every 5 minutes
+                time.sleep(300)
+
+    # Start cleanup thread
+    cleanup_thread = threading.Thread(target=cleanup_inactive_nodes, daemon=True)
+    cleanup_thread.start()
 
 if __name__ == '__main__':
-    app.run(
-        debug=app.config['DEBUG'],
-        host=app.config['API_HOST'],
-        port=app.config['API_PORT']
-    )
+    app = create_app()
+
+    # Start periodic tasks
+    run_periodic_tasks(app)
+
+    # Run the application
+    app.run(debug=True, host='0.0.0.0', port=15002)

@@ -4,46 +4,39 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Flask Configuration
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
+    # Flask
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
+    DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-    # Database Configuration
-    POSTGRES_USER = os.environ.get('POSTGRES_USER', 'postgres')
-    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD', 'postgres')
+    # Database
     POSTGRES_HOST = os.environ.get('POSTGRES_HOST', 'localhost')
     POSTGRES_PORT = os.environ.get('POSTGRES_PORT', '5432')
-    POSTGRES_DB = os.environ.get('POSTGRES_DB', 'discovery_db')
+    POSTGRES_DB = os.environ.get('POSTGRES_DB', 'discovery')
+    POSTGRES_USER = os.environ.get('POSTGRES_USER', 'postgres')
+    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD', 'postgres')
 
     SQLALCHEMY_DATABASE_URI = (
         f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
         f"{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = os.environ.get('SQLALCHEMY_ECHO', 'false').lower() == 'true'
 
-    # Redis Configuration
-    REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
-    REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
-    REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "redis@pass")
-    REDIS_EXPIRE_SECONDS = int(os.environ.get("REDIS_EXPIRE_SECONDS", 45))
+    # Redis
+    REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+    REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+    REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', 'redis@pass')
+    REDIS_EXPIRE_SECONDS = int(os.environ.get('REDIS_EXPIRE_SECONDS', 45))
 
-    # Discovery API Configuration
-    API_HOST = os.environ.get('API_HOST', '0.0.0.0')
-    API_PORT = int(os.environ.get('API_PORT', 15002))
-    DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+    # Load Balancer Settings
+    DEFAULT_MAX_CPU_USAGE = 80.0
+    DEFAULT_MAX_MEMORY_USAGE = 85.0
+    STRICT_MAX_CPU_USAGE = 60.0
+    STRICT_MAX_MEMORY_USAGE = 60.0
+    STRICT_MAX_CONTAINERS = 5
 
-class DevelopmentConfig(Config):
-    DEBUG = True
-
-class ProductionConfig(Config):
-    DEBUG = False
-
-class TestingConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-
-config = {
-    'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'testing': TestingConfig,
-    'default': DevelopmentConfig
-}
+    # Scoring weights
+    CPU_WEIGHT = 0.5
+    MEMORY_WEIGHT = 0.5
+    HEAVY_PENALTY = 50
+    MEDIUM_PENALTY = 20
