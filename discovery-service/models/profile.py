@@ -9,14 +9,14 @@ class Profile(db.Model):
     description = db.Column(db.Text)
     min_nodes = db.Column(db.Integer, default=1)
     max_nodes = db.Column(db.Integer, default=1)
-    cpu_requirement = db.Column(db.Integer)  # minimum CPU cores per node
-    ram_requirement = db.Column(db.Float)    # minimum RAM GB per node
+    cpu_requirement = db.Column(db.Integer)
+    ram_requirement = db.Column(db.Float)  
     gpu_required = db.Column(db.Boolean, default=False)
     max_cpu_usage = db.Column(db.Float, default=80.0)
     max_memory_usage = db.Column(db.Float, default=85.0)
-    priority = db.Column(db.Integer, default=0)  # higher priority gets better nodes
+    priority = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     # Relationships
     selections = db.relationship('NodeSelection', back_populates='profile')
@@ -40,7 +40,7 @@ class Profile(db.Model):
 
     def matches_node(self, node):
         """Check if a node meets this profile's requirements"""
-        if self.cpu_requirement and node.cpu < self.cpu_requirement:
+        if self.cpu_requirement and node.cpu_cores < self.cpu_requirement:
             return False
         if self.ram_requirement and node.ram_gb < self.ram_requirement:
             return False

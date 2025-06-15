@@ -7,19 +7,25 @@ class Node(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     hostname = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    ip = db.Column(db.String(45), nullable=False)
-    cpu = db.Column(db.Integer, default=0)
-    ram_gb = db.Column(db.Float, default=0)
-    has_gpu = db.Column(db.Boolean, default=False)
-    gpu = db.Column(JSON, default=list)
+    ip = db.Column(db.String(45), nullable=False, index=True)
+    cpu_cores = db.Column(db.Integer, nullable=False)
+    ram_gb = db.Column(db.Float, nullable=False)
+    has_gpu = db.Column(db.Boolean, default=False, index=True)
+    gpu_info = db.Column(JSON, default=list)
+
+    # Node status & capacity
     is_active = db.Column(db.Boolean, default=True, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    max_containers = db.Column(db.Integer, default=10)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    last_heartbeat = db.Column(db.DateTime, index=True)
 
     # Relationships
     metrics = db.relationship('NodeMetric', back_populates='node', cascade='all, delete-orphan')
 
-    # Current state (from Redis, not persisted)
+    # Redis state, non persistent
     _current_cpu_usage = None
     _current_memory_usage = None
     _current_disk_usage = None
@@ -32,18 +38,21 @@ class Node(db.Model):
             'id': self.id,
             'hostname': self.hostname,
             'ip': self.ip,
-            'cpu': self.cpu,
+            'cpu_cores': self.cpu_cores,
             'ram_gb': self.ram_gb,
             'has_gpu': self.has_gpu,
-            'gpu': self.gpu,
+            'gpu_info': self.gpu_info,
             'is_active': self.is_active,
+            'max_containers': self.max_containers,
             'cpu_usage_percent': self._current_cpu_usage,
             'memory_usage_percent': self._current_memory_usage,
             'disk_usage_percent': self._current_disk_usage,
             'active_jupyterlab': self._active_jupyterlab,
             'active_ray': self._active_ray,
             'total_containers': self._total_containers,
-            'last_updated': self.updated_at.isoformat() if self.updated_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'last_heartbeat': self.last_heartbeat.isoformat() if self.last_heartbeat else None
         }
 
     def update_current_metrics(self, metrics_dict):

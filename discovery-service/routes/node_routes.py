@@ -63,51 +63,6 @@ def available_nodes():
         logger.error(f"Error in available_nodes: {e}")
         return jsonify({"error": str(e)}), 500
 
-@node_bp.route("/jupyterhub-nodes")
-def jupyterhub_nodes():
-    """Get nodes suitable for JupyterHub with strict filtering"""
-    try:
-        # Get parameters
-        count = request.args.get('count', 1, type=int)
-        profile_name = request.args.get('profile', 'basic')
-
-        # Try to get profile
-        from services.profile_service import ProfileService
-        profile = ProfileService.get_profile_by_name(profile_name)
-        profile_id = profile.id if profile else None
-
-        # Get strictly filtered nodes
-        nodes = node_service.get_available_nodes(
-            profile_id=profile_id,
-            strict_filter=True
-        )
-
-        if not nodes:
-            return jsonify({
-                "error": "No suitable nodes for JupyterHub",
-                "criteria": "CPU < 60%, Memory < 60%, Active Containers < 5",
-                "total_nodes": 0,
-                "selected_nodes": []
-            }), 404
-
-        # Select nodes
-        selected = select_nodes_by_algorithm(nodes, 'round_robin', count)
-
-        return jsonify({
-            "total_available_nodes": len(nodes),
-            "selected_nodes": selected,
-            "profile_used": profile_name,
-            "load_balancing": {
-                "algorithm": "round_robin_with_scoring",
-                "round_robin_counter": get_round_robin_counter(),
-                "filter_applied": "jupyterhub_strict"
-            },
-            "all_available_nodes": nodes
-        })
-    except Exception as e:
-        logger.error(f"Error in jupyterhub_nodes: {e}")
-        return jsonify({"error": str(e)}), 500
-
 @node_bp.route("/node/<hostname>")
 def get_node_by_hostname(hostname):
     """Get specific node by hostname"""

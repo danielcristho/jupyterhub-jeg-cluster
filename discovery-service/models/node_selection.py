@@ -7,11 +7,11 @@ class NodeSelection(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     profile_id = db.Column(db.Integer, db.ForeignKey('profiles.id'))
-    user_id = db.Column(db.String(255), index=True)  # JupyterHub user
+    user_id = db.Column(db.String(255), index=True)
     session_id = db.Column(db.String(255))
-    selected_nodes = db.Column(JSON)  # array of {'id': x, 'hostname': y}
-    selection_reason = db.Column(db.String(50))  # 'manual', 'auto_balanced', 'profile_based'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    selected_nodes = db.Column(JSON)
+    selection_reason = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
     # Relationships
     profile = db.relationship('Profile', back_populates='selections')

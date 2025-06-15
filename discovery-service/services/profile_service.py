@@ -15,8 +15,8 @@ class ProfileService:
                 'description': 'Single node with CPU only',
                 'min_nodes': 1,
                 'max_nodes': 1,
-                'cpu_requirement': 4,
-                'ram_requirement': 8.0,
+                'cpu_requirement': 2,
+                'ram_requirement': 2,
                 'gpu_required': False,
                 'max_cpu_usage': 80.0,
                 'max_memory_usage': 85.0,
@@ -28,7 +28,7 @@ class ProfileService:
                 'min_nodes': 1,
                 'max_nodes': 1,
                 'cpu_requirement': 4,
-                'ram_requirement': 16.0,
+                'ram_requirement': 8,
                 'gpu_required': True,
                 'max_cpu_usage': 80.0,
                 'max_memory_usage': 85.0,
@@ -71,6 +71,32 @@ class ProfileService:
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error creating default profiles: {e}")
+
+    @staticmethod
+    def update_profile(profile_id: int, update_data: dict) -> Profile:
+        """Update a profile by ID with allowed fields"""
+        profile = Profile.query.get(profile_id)
+        if not profile:
+            raise ValueError("Profile not found")
+
+        allowed_fields = [
+            "name", "description", "min_nodes", "max_nodes",
+            "cpu_requirement", "ram_requirement", "gpu_required",
+            "max_cpu_usage", "max_memory_usage", "priority", "is_active"
+        ]
+
+        for field in allowed_fields:
+            if field in update_data:
+                setattr(profile, field, update_data[field])
+
+        try:
+            db.session.commit()
+            logger.info(f"Updated profile {profile_id}")
+            return profile
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating profile {profile_id}: {e}")
+            raise
 
     @staticmethod
     def get_all_profiles(active_only: bool = True) -> List[Profile]:

@@ -32,7 +32,8 @@ class NodeService:
 
             # Update static information
             node.ip = node_data.get('ip', node.ip)
-            node.cpu = node_data.get('cpu', node.cpu)
+            # node.cpu = node_data.get('cpu', node.cpu)
+            node.cpu_cores = node_data.get('cpu_cores', node.cpu_cores)
             node.ram_gb = node_data.get('ram_gb', node.ram_gb)
             node.has_gpu = node_data.get('has_gpu', node.has_gpu)
             node.gpu = node_data.get('gpu', [])
@@ -205,7 +206,8 @@ class NodeService:
 
     def _node_matches_profile(self, node_dict: dict, profile) -> bool:
         """Check if node matches profile requirements"""
-        if profile.cpu_requirement and node_dict.get('cpu', 0) < profile.cpu_requirement:
+        # if profile.cpu_requirement and node_dict.get('cpu', 0) < profile.cpu_requirement:
+        if profile.cpu_requirement and node_dict.get('cpu_cores', 0) < profile.cpu_requirement:
             return False
         if profile.ram_requirement and node_dict.get('ram_gb', 0) < profile.ram_requirement:
             return False

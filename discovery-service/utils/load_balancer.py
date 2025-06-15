@@ -13,8 +13,7 @@ def get_round_robin_counter() -> int:
 
 def get_next_round_robin_node(nodes: List[Dict]) -> Optional[Dict]:
     """
-    Select next node using round-robin algorithm.
-    Assumes nodes are already sorted by score/preference.
+    Select next node using round-robin algorithm
     """
     global _round_robin_counter
 
@@ -47,14 +46,6 @@ def select_best_nodes(nodes: List[Dict], count: int = 1) -> List[Dict]:
 def select_nodes_by_algorithm(nodes: List[Dict],
                             algorithm: str = 'round_robin',
                             count: int = 1) -> List[Dict]:
-    """
-    Select nodes using specified algorithm.
-
-    Algorithms:
-    - 'round_robin': Round-robin selection from sorted nodes
-    - 'best_fit': Select nodes with lowest load scores
-    - 'random': Random selection (useful for testing)
-    """
     if not nodes:
         return []
 

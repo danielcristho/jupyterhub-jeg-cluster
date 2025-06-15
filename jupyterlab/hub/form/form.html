@@ -11,7 +11,7 @@
         <!-- Header -->
         <!-- <div class="header">
             <h2>Start Your JupyterLab Server</h2>
-            <p>Select your computing profile and environment to get started</p>
+            <p>Select your computing profile and environment</p>
         </div> -->
 
         <!-- Status Bar -->
@@ -40,8 +40,9 @@
             <div class="form-group">
                 <label class="form-label">Docker Image</label>
                 <select name="image" id="image">
-                    <option value="danielcristh0/jupyterlab:cpu">danielcristh0/jupyterlab:cpu</option>
-                    <option value="danielcristh0/jupyterlab:gpu">danielcristh0/jupyterlab:gpu</option>
+                    <!-- CRITICAL FIX: Use exact image names as values -->
+                    <option value="danielcristh0/jupyterlab:cpu">CPU Environment (danielcristh0/jupyterlab:cpu)</option>
+                    <option value="danielcristh0/jupyterlab:gpu">GPU Environment (danielcristh0/jupyterlab:gpu)</option>
                 </select>
                 <div class="form-help">Choose CPU for general computing or GPU for machine learning tasks</div>
             </div>

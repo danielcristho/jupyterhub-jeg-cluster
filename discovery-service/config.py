@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'secret-service-1111')
     DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
     # Database
@@ -36,7 +36,7 @@ class Config:
     STRICT_MAX_CONTAINERS = 5
 
     # Scoring weights
-    CPU_WEIGHT = 0.5
-    MEMORY_WEIGHT = 0.5
-    HEAVY_PENALTY = 50
+    CPU_WEIGHT = 0.8
+    MEMORY_WEIGHT = 0.8
+    HEAVY_PENALTY = 80
     MEDIUM_PENALTY = 20

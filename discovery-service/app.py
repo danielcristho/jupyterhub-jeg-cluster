@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
+# from flasgger import Swagger
 import logging
 import os
 
@@ -21,6 +22,7 @@ logger = logging.getLogger("DiscoveryAPI")
 def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
+    # swagger = Swagger(app) # add swagger
 
     # Load configuration
     app.config.from_object(Config)
@@ -47,42 +49,16 @@ def create_app():
                 "postgres": "connected" if db.engine else "disconnected",
                 "redis": "connected" if redis_service.is_connected() else "disconnected"
             },
-            "config": {
-                "redis_host": Config.REDIS_HOST,
-                "redis_port": Config.REDIS_PORT,
-                "postgres_host": Config.POSTGRES_HOST,
-                "postgres_port": Config.POSTGRES_PORT
-            }
+            # "config": {
+            #     "redis_host": Config.REDIS_HOST,
+            #     "redis_port": Config.REDIS_PORT,
+            #     "postgres_host": Config.POSTGRES_HOST,
+            #     "postgres_port": Config.POSTGRES_PORT
+            # }
         }), 200
 
-    # Debug routes (remove in production)
-    @app.route("/debug-redis")
-    def debug_redis():
-        """Debug endpoint to check Redis status"""
-        from services.redis_service import RedisService
-        redis_service = RedisService()
 
-        if not redis_service.is_connected():
-            return jsonify({"error": "Redis not available"}), 500
-
-        try:
-            all_keys = redis_service.client.keys("*")
-            node_keys = redis_service.get_all_node_keys()
-
-            debug_info = {
-                "redis_connected": True,
-                "total_keys": len(all_keys),
-                "node_keys": node_keys,
-                "nodes_data": redis_service.get_all_nodes_data()
-            }
-
-            return jsonify(debug_info)
-        except Exception as e:
-            return jsonify({"error": f"Redis debug error: {str(e)}"}), 500
-
-    # Initialize database and default data
     with app.app_context():
-        # Create tables if they don't exist
         db.create_all()
 
         # Initialize default profiles
@@ -96,7 +72,7 @@ def create_app():
     return app
 
 def run_periodic_tasks(app):
-    """Run periodic maintenance tasks"""
+    """Run periodic tasks"""
     import threading
     import time
 
@@ -115,7 +91,6 @@ def run_periodic_tasks(app):
                 except Exception as e:
                     logger.error(f"Error in cleanup task: {e}")
 
-                # Run every 5 minutes
                 time.sleep(300)
 
     # Start cleanup thread

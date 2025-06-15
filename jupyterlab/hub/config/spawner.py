@@ -1,5 +1,3 @@
-"""Spawner configuration: Integrates service discovery, multi-node spawning, and dynamic node selection"""
-
 import os
 import json
 from spawner.multinode import MultiNodeSpawner
@@ -7,119 +5,143 @@ from tornado.web import StaticFileHandler
 
 STATIC_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "form"))
 
+def options_from_form(formdata):
+    import logging
+    logger = logging.getLogger("jupyterhub")
+
+    raw = formdata.get('selected_nodes', ['[]'])[0]
+    logger.info(f"[DEBUG] raw selected_nodes: {raw} ({type(raw)})")
+
+    selected_nodes = []
+    
+    if isinstance(raw, str):
+        if raw.strip():
+            try:
+                selected_nodes = json.loads(raw)
+                logger.info(f"[DEBUG] Successfully parsed JSON: {len(selected_nodes)} nodes")
+            except json.JSONDecodeError as e:
+                logger.warning(f"[options_from_form] Failed to parse JSON '{raw}': {e}")
+                selected_nodes = []
+        else:
+            logger.warning(f"[options_from_form] Empty string received")
+            selected_nodes = []
+    elif isinstance(raw, list):
+        selected_nodes = raw
+        logger.info(f"[DEBUG] Using list directly: {len(selected_nodes)} nodes")
+    else:
+        logger.error(f"[options_from_form] Unexpected type: {type(raw)}")
+        selected_nodes = []
+
+    # Additional validation
+    if not isinstance(selected_nodes, list):
+        logger.error(f"[DEBUG] selected_nodes is not a list: {type(selected_nodes)}")
+        selected_nodes = []
+
+    # Validate each node has required fields
+    validated_nodes = []
+    for i, node in enumerate(selected_nodes):
+        if isinstance(node, dict) and 'ip' in node and 'hostname' in node:
+            validated_nodes.append(node)
+            logger.info(f"[DEBUG] Node {i} valid: {node.get('hostname')} ({node.get('ip')})")
+        else:
+            logger.warning(f"[DEBUG] Node {i} invalid or missing keys: {node}")
+
+    logger.info(f"[FORM_DATA] Final validated nodes: {len(validated_nodes)}")
+
+    return {
+        'profile_id': formdata.get('profile_id', [''])[0],
+        'profile_name': formdata.get('profile_name', [''])[0],
+        'selected_nodes': validated_nodes,  # Use validated list, not JSON string
+        'primary_node': formdata.get('primary_node', [''])[0],
+        'image': formdata.get('image', [''])[0],
+    }
 
 def configure_spawner(c):
-    """Configure JupyterHub to use MultiNodeSpawner with Service Discovery"""
-
-    # Use MultiNodeSpawner
     c.JupyterHub.spawner_class = MultiNodeSpawner
+    c.Spawner.options_from_form = options_from_form 
 
-    # Service Discovery Configuration
     c.MultiNodeSpawner.discovery_api_url = os.environ.get(
         'DISCOVERY_API_URL',
-        'http://localhost:15002'
+        'http://192.168.122.1:15002'
     )
+    c.MultiNodeSpawner.enable_multi_node = True
 
-    # Load HTML Form (yang sudah kita buat tadi)
     form_path = os.path.join(STATIC_PATH, "form.html")
-    with open(form_path) as f:
-        c.Spawner.options_form = f.read()
+    if os.path.exists(form_path):
+        with open(form_path, 'r', encoding='utf-8') as f:
+            c.Spawner.options_form = f.read()
 
-    # Serve static files (CSS, JS if needed)
-    c.JupyterHub.extra_handlers = [
-        (r"/form/(.*)", StaticFileHandler, {"path": STATIC_PATH})
-    ]
-
-    # Allowed Docker images
+        c.JupyterHub.extra_handlers = [
+            (r"/form/(.*)", StaticFileHandler, {"path": STATIC_PATH})
+        ]
+    else:
+        c.Spawner.options_form = """<div>Simple fallback form loaded.</div>"""
+    
     allowed_images = {
-        "danielcristh0/jupyterlab:cpu": "CPU Environment",
-        "danielcristh0/jupyterlab:gpu": "GPU Environment (CUDA)",
+        "danielcristh0/jupyterlab:cpu": "danielcristh0/jupyterlab:cpu",
+        "danielcristh0/jupyterlab:gpu": "danielcristh0/jupyterlab:gpu",
     }
     c.DockerSpawner.allowed_images = allowed_images
 
-    # Multi-node configuration
-    c.MultiNodeSpawner.enable_multi_node = True
-
-    # Spawner timeouts
     c.Spawner.start_timeout = 600
     c.Spawner.http_timeout = 300
     c.Spawner.poll_interval = 30
-
-    # Container naming
     c.Spawner.name_template = "jupyterlab-{username}"
     c.Spawner.default_url = "/lab"
 
-    # DockerSpawner base configuration
-    c.DockerSpawner.image = os.environ.get(
-        "DOCKER_NOTEBOOK_IMAGE",
-        "danielcristh0/jupyterlab:cpu"
-    )
+    c.DockerSpawner.image = "danielcristh0/jupyterlab:cpu"
     c.DockerSpawner.notebook_dir = "/home/jovyan/work"
     c.DockerSpawner.volumes = {
-        "jupyterhub-user-{username}": "/home/jovyan/work",
-        "shared-data": {
-            "bind": "/home/jovyan/shared",
-            "mode": "ro"  # Read-only shared data
-        }
+        "jupyterhub-user-{username}": "/home/jovyan/work"
     }
-
-    # Resource limits (akan di-override berdasarkan profile)
-    c.DockerSpawner.cpu_limit = 2.0
-    c.DockerSpawner.mem_limit = "4G"
+    c.DockerSpawner.cpu_limit = 4.0
+    c.DockerSpawner.mem_limit = "8G"
     c.DockerSpawner.remove = True
     c.DockerSpawner.debug = True
-
-    # Network configuration for multi-node
-    c.DockerSpawner.network_name = "jupyterhub-network"
     c.DockerSpawner.use_internal_ip = False
 
-    # Extra host configuration for GPU
-    c.DockerSpawner.extra_host_config = {}
+    c.JupyterHub.hub_ip = '192.168.122.1'
+    c.JupyterHub.hub_port = 8081
+    c.JupyterHub.port = 8000
+    c.JupyterHub.log_level = 'DEBUG'
 
-    # Pre-spawn hook untuk dynamic resource allocation
+    c.Authenticator.admin_users = {'admin'}
+
     async def pre_spawn_hook(spawner):
-        """Dynamically set resources based on selected profile"""
         user_options = spawner.user_options
-        profile_name = user_options.get('profile_name', 'basic')
+        profile_name = user_options.get('profile_name', 'single-cpu')
 
-        # Set resource limits based on profile
-        resource_limits = {
-            'basic': {'cpu': 2, 'memory': '4G'},
-            'standard': {'cpu': 4, 'memory': '8G'},
-            'high-performance': {'cpu': 8, 'memory': '16G'},
-            'gpu-compute': {'cpu': 4, 'memory': '16G', 'gpu': True}
-        }
+        config = {
+            'single-cpu': {'cpu': 1, 'memory': '2G', 'env': {'RAY_ENABLED': 'false'}},
+            'single-gpu': {'cpu': 1, 'memory': '2G', 'gpu': True, 'env': {'RAY_ENABLED': 'false'}},
+            'multi-cpu': {'cpu': 1, 'memory': '2G', 'env': {'RAY_ENABLED': 'true'}},
+            'multi-gpu': {'cpu': 1, 'memory': '2G', 'gpu': True, 'env': {'RAY_ENABLED': 'true'}}
+        }.get(profile_name, {'cpu': 1, 'memory': '2G', 'env': {}})
 
-        limits = resource_limits.get(profile_name, resource_limits['basic'])
-        spawner.cpu_limit = limits['cpu']
-        spawner.mem_limit = limits['memory']
+        spawner.cpu_limit = config['cpu']
+        spawner.mem_limit = config['memory']
+        spawner.environment = spawner.environment or {}
+        spawner.environment.update(config['env'])
 
-        # Configure GPU if needed
-        if limits.get('gpu') and user_options.get('image', '').endswith(':gpu'):
-            spawner.extra_host_config = {
+        if config.get('gpu') and 'gpu' in user_options.get('image', '').lower():
+            spawner.extra_host_config = spawner.extra_host_config or {}
+            spawner.extra_host_config.update({
                 'runtime': 'nvidia',
                 'device_requests': [{
                     'driver': 'nvidia',
                     'capabilities': [['gpu']],
-                    'count': 1  # or 'all' for all GPUs
+                    'count': 1
                 }]
-            }
+            })
 
-        # Log spawn information
-        spawner.log.info(
-            f"Pre-spawn: User {spawner.user.name} "
-            f"Profile: {profile_name} "
-            f"Nodes: {user_options.get('node_count', 1)} "
-            f"CPU: {spawner.cpu_limit} "
-            f"Memory: {spawner.mem_limit}"
-        )
+        spawner.log.info(f"Spawner configured: CPU={spawner.cpu_limit}, Memory={spawner.mem_limit}, Profile={profile_name}")
+
+    async def post_stop_hook(spawner):
+        spawner.log.info(f"Post-stop cleanup for {spawner.user.name}")
+        if hasattr(spawner, 'worker_containers'):
+            spawner.worker_containers.clear()
 
     c.Spawner.pre_spawn_hook = pre_spawn_hook
-
-    # Post-stop hook untuk cleanup
-    async def post_stop_hook(spawner):
-        """Clean up after container stops"""
-        spawner.log.info(f"Post-stop cleanup for {spawner.user.name}")
-        # Additional cleanup if needed
-
     c.Spawner.post_stop_hook = post_stop_hook
+
+    return c

@@ -1,5 +1,5 @@
 // Configuration
-const API_URL = "http://localhost:15002";
+const API_URL = "http://192.168.122.1:15002";
 let profiles = [];
 let nodes = [];
 let selectedProfile = null;
@@ -58,8 +58,8 @@ function getFallbackProfiles() {
             description: 'Single node with CPU only',
             min_nodes: 1,
             max_nodes: 1,
-            cpu_requirement: 4,
-            ram_requirement: 8,
+            cpu_requirement: 2,
+            ram_requirement: 2,
             gpu_required: false
         },
         {
@@ -68,8 +68,8 @@ function getFallbackProfiles() {
             description: 'Single node with GPU acceleration',
             min_nodes: 1,
             max_nodes: 1,
-            cpu_requirement: 4,
-            ram_requirement: 16,
+            cpu_requirement: 2,
+            ram_requirement: 2,
             gpu_required: true
         },
         {
@@ -78,8 +78,8 @@ function getFallbackProfiles() {
             description: 'Multiple nodes with CPU only',
             min_nodes: 2,
             max_nodes: 4,
-            cpu_requirement: 4,
-            ram_requirement: 8,
+            cpu_requirement: 2,
+            ram_requirement: 2,
             gpu_required: false
         },
         {
@@ -88,8 +88,8 @@ function getFallbackProfiles() {
             description: 'Multiple nodes with GPU acceleration',
             min_nodes: 2,
             max_nodes: 4,
-            cpu_requirement: 4,
-            ram_requirement: 16,
+            cpu_requirement: 2,
+            ram_requirement: 2,
             gpu_required: true
         }
     ];
@@ -141,10 +141,10 @@ function renderProfiles() {
             <div class="profile-desc">${profile.description}</div>
             <div class="profile-specs">
                 <div class="spec-item">
-                    <span>${profile.cpu_requirement || 4} CPU cores</span>
+                    <span>${profile.cpu_requirement || 2} CPU cores</span>
                 </div>
                 <div class="spec-item">
-                    <span>${profile.ram_requirement || 8} GB RAM</span>
+                    <span>${profile.ram_requirement || 4} GB RAM</span>
                 </div>
                 <div class="spec-item">
                     <span>${isMultiNode ? `${profile.min_nodes}-${profile.max_nodes} nodes` : '1 node'}</span>
@@ -199,6 +199,10 @@ async function selectProfile(profile) {
     } else {
         document.getElementById('image').value = 'danielcristh0/jupyterlab:cpu';
     }
+    
+    // CRITICAL FIX: Log the selected image for debugging
+    const selectedImage = document.getElementById('image').value;
+    console.log('[DEBUG] Profile selected, image set to:', selectedImage);
 
     // Load and display nodes
     await displayNodes();
@@ -335,8 +339,12 @@ function renderNodes(nodesList) {
         nodeList.appendChild(nodeDiv);
     });
 
-    // Update hidden fields
-    document.getElementById('selected_nodes').value = JSON.stringify(selectedNodes);
+    // CRITICAL FIX: Convert selectedNodes to JSON string before setting
+    console.log('[DEBUG] selectedNodes before JSON.stringify:', selectedNodes);
+    const selectedNodesJson = JSON.stringify(selectedNodes);
+    console.log('[DEBUG] selectedNodes JSON string:', selectedNodesJson);
+    
+    document.getElementById('selected_nodes').value = selectedNodesJson;
     document.getElementById('node_count_final').value = selectedNodes.length;
     if (selectedNodes.length > 0) {
         document.getElementById('primary_node').value = selectedNodes[0].hostname;
@@ -418,8 +426,43 @@ setInterval(async function() {
         await loadNodes();
         // Only update display if user hasn't manually selected
         if (document.querySelector('.node-item.manual-select') === null) {
-            // Don't auto-refresh display to avoid disrupting user
             // await displayNodes();
         }
     }
 }, 30000);
+
+document.querySelector("form").addEventListener("submit", function (e) {
+    if (!selectedProfile || selectedNodes.length === 0) {
+        e.preventDefault();
+        alert("Please select a profile and wait for node selection before launching.");
+        return;
+    }
+    
+    // Additional validation before submit
+    const selectedNodesValue = document.getElementById('selected_nodes').value;
+    console.log('[SUBMIT] Final selected_nodes value:', selectedNodesValue);
+    
+    if (!selectedNodesValue || selectedNodesValue === '[]') {
+        e.preventDefault();
+        alert("No nodes selected. Please try selecting a profile again.");
+        return;
+    }
+    
+    // CRITICAL FIX: Validate image selection
+    const imageValue = document.getElementById('image').value;
+    console.log('[SUBMIT] Final image value:', imageValue);
+    
+    if (!imageValue || imageValue.trim() === '') {
+        e.preventDefault();
+        alert("No image selected. Please select an image.");
+        return;
+    }
+    
+    // Final form data logging for debugging
+    console.log('[SUBMIT] Form data summary:');
+    console.log('- Profile ID:', document.getElementById('profile_id').value);
+    console.log('- Profile Name:', document.getElementById('profile_name').value);
+    console.log('- Image:', imageValue);
+    console.log('- Selected Nodes:', selectedNodesValue);
+    console.log('- Primary Node:', document.getElementById('primary_node').value);
+});

@@ -20,10 +20,18 @@ def register():
         try:
             resp = requests.post(DISCOVERY_URL, json=payload)
             print(f"[AGENT] Registered: {payload['hostname']} ({payload['ip']}) → {resp.status_code}")
+            
+            if resp.status_code != 200:
+                try:
+                    error_detail = resp.json()
+                    print(f"[ERROR] Response: {error_detail}")
+                except:
+                    print(f"[ERROR] Raw response: {resp.text}")
+                    
         except Exception as e:
             print(f"[AGENT] Failed to register node: {e}")
     else:
-        print("[DEBUG] Payload kosong, tidak dikirim.")
+        print("[DEBUG] Payload tidak boleh kosong!!")
 
 def collect_node_info():
     """Collect node or server info"""
@@ -46,10 +54,13 @@ def collect_node_info():
         payload = {
             "hostname": hostname,
             "ip": ip_address,
-            "cpu": os.cpu_count(),
-            "gpu": gpu_stats,
+            "cpu_cores": os.cpu_count(),                   
+            "gpu_info": gpu_stats,                         
             "has_gpu": len(gpu_stats) > 0,
             "ram_gb": ram_gb,
+            "max_containers": 10,                          
+            "is_active": True,                            
+            
             "cpu_usage_percent": round(cpu_usage, 2),
             "memory_usage_percent": round(memory.percent, 2),
             "disk_usage_percent": round(disk.percent, 2),
@@ -79,14 +90,9 @@ def get_gpu_stats():
                 "memory_util_percent": round(gpu.memory_used / gpu.memory_total * 100, 2) if gpu.memory_total else 0,
                 "utilization_gpu_percent": gpu.utilization,
                 "temperature_gpu": gpu.temperature
-                # "processes": [{
-                #     "pid": p.get('pid', -1),
-                #     "gpu_memory_usage_mb": p.get('memory_usage', 0)
-                # } for p in gpu.processes or []]
             })
         return gpu_info
     except Exception as e:
-        # print(f"[GPUSTAT] Failed to query GPU stat: {e}")
         print(f"[GPUSTAT] NVIDIA GPU not available or error: {e}")
         return []
 
@@ -110,7 +116,7 @@ def detect_amd_gpu():
     return []
 
 def get_container_info():
-    """Get container details, count jupyter and ray congtainer"""
+    """Get container details, count jupyter and ray container"""
     container_info = {
         "jupyterlab_count": 0,
         "ray_count": 0,
@@ -122,23 +128,20 @@ def get_container_info():
         docker_client = docker.from_env()
         containers = docker_client.containers.list()
         container_info["total_count"] = len(containers)
-
+        """Count Jupyterlab&Ray Containers"""
         for container in containers:
             container_name = container.name.lower()
             container_image = container.image.tags[0] if container.image.tags else "unknown"
 
-            # Count jupy containers
-            if any(keyword in container_name for keyword in ["jupyter", "jupyterlab"]) or \
-                any(keyword in container_image.lower() for keyword in ["jupyter", "jupyterlab"]):
+            if any(keyword in container_name for keyword in ["jupyter"]) or \
+                any(keyword in container_image.lower() for keyword in ["jupyter"]):
                     container_info["jupyterlab_count"] += 1
-
-            # Count ray containers
             if any(keyword in container_name for keyword in ["ray"]) or \
-                any(keyword in container_image.lower() for keyword in ["ray", "rayproject"]):
+                any(keyword in container_image.lower() for keyword in ["ray"]):
                     container_info["ray_count"] += 1
 
-            print(f"[DEBUG] Container Summary: Total={container_info['total_count']}, "
-                  f"JupyterLab={container_info['jupyterlab_count']}, Ray={container_info['ray_count']}")
+        print(f"[DEBUG] Container Summary: Total={container_info['total_count']}, "
+                f"JupyterLab={container_info['jupyterlab_count']}, Ray={container_info['ray_count']}")
 
     except Exception as e:
         print(f"[DOCKER] Error getting container info: {e}")
@@ -147,6 +150,9 @@ def get_container_info():
 
 
 if __name__ == "__main__":
+    print(f"[AGENT] Starting node registration agent...")
+    print(f"[AGENT] Target URL: {DISCOVERY_URL}")
+    
     while True:
         register()
         time.sleep(15)
