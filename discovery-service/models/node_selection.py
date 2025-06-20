@@ -41,7 +41,7 @@ class NodeMetric(db.Model):
     active_ray = db.Column(db.Integer, default=0)
     total_containers = db.Column(db.Integer, default=0)
     load_score = db.Column(db.Float)
-    recorded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    recorded_at = db.Column(db.DateTime, default=datetime.now, index=True)
 
     # Relationships
     node = db.relationship('Node', back_populates='metrics')

@@ -9,7 +9,7 @@ from traitlets import Unicode, Dict, List, Bool
 
 class MultiNodeSpawner(DockerSpawner):
     """
-    Multi-Node Spawner
+    Multi-Node Spawner configuration
     """
     host = Unicode("tcp://0.0.0.0:2375", config=True)
     tls_config = Dict({}, config=True)
@@ -17,7 +17,7 @@ class MultiNodeSpawner(DockerSpawner):
     discovery_api_url = Unicode(
         default_value="http://192.168.122.1:15002",
         config=True,
-        help="Service Discovery API URL (must match form API_URL)"
+        help="Service Discovery API URL"
     ).tag(config=True)
 
     # Multi-node configuration
@@ -30,11 +30,6 @@ class MultiNodeSpawner(DockerSpawner):
     # Node information
     selected_nodes = List(trait=Dict(), default_value=[])
     worker_containers = Dict(default_value={})
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.use_internal_ip = False
-        self._docker_clients = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -219,7 +214,7 @@ class MultiNodeSpawner(DockerSpawner):
         return super().create_object()
 
     def _parse_form_data(self):
-        """Parse data from your HTML form - FIXED VERSION"""
+        """Parse data from your HTML form"""
         logger = logging.getLogger("jupyterhub")
         logger.info(f"[FORM_DATA] Raw user_options: {self.user_options}")
         
@@ -231,10 +226,9 @@ class MultiNodeSpawner(DockerSpawner):
             'profile_id': self.user_options.get('profile_id'),
             'profile_name': self.user_options.get('profile_name'),
             'image': self.user_options.get('image', 'danielcristh0/jupyterlab:cpu'),
-            'selected_nodes_raw': self.user_options.get('selected_nodes'),  # This is now a list from options_from_form
+            'selected_nodes_raw': self.user_options.get('selected_nodes'),
             'primary_node': self.user_options.get('primary_node'),
             'node_count_final': int(self.user_options.get('node_count_final', 1)),
-
             'node_ip': self.user_options.get('node_ip'),
             'node': self.user_options.get('node', 'unknown'),
         }
@@ -299,6 +293,7 @@ class MultiNodeSpawner(DockerSpawner):
         primary_node = self.selected_nodes[0]
         await self._start_primary_container(primary_node, form_data)
 
+        # Start workers if multi-node is enabled and we have more than 1 node
         if self.enable_multi_node and len(self.selected_nodes) > 1:
             await self._start_worker_containers(form_data)
 
@@ -315,7 +310,7 @@ class MultiNodeSpawner(DockerSpawner):
         return (str(final_ip), int(final_port))
 
     async def _start_primary_container(self, primary_node, form_data):
-        """Start primary container using your proven logic - FIXED VERSION"""
+        """Start primary container - simplified without Ray"""
         
         logger = logging.getLogger("jupyterhub")
         logger.info(f"[DEBUG] primary_node data: {primary_node}")
@@ -355,7 +350,7 @@ class MultiNodeSpawner(DockerSpawner):
         self.host = new_host
         self.tls_config = {}
         self.use_internal_ip = False
-        self.image = image  # Set the cleaned image
+        self.image = image
         self._client = None  # Force recreation
 
         # Test Docker connection
@@ -370,26 +365,26 @@ class MultiNodeSpawner(DockerSpawner):
 
         self.log.info(f"[PRIMARY] Starting on {primary_node.get('hostname', 'unknown')} ({node_ip})")
         self.log.info(f"[PRIMARY] Docker client: {client.base_url}")
-        self.log.info(f"[PRIMARY] Using image: {self.image}")  # Log the actual image being used
+        self.log.info(f"[PRIMARY] Using image: {self.image}")
 
         # Hub configuration
         hub_ip = "192.168.122.1"
 
-        # CRITICAL FIX: Set image as user option to bypass validation
+        # Set image as user option to bypass validation
         self.user_options['image'] = image
         self.log.info(f"[DEBUG] Set user_options image to: {self.user_options.get('image')}")
 
-        # Environment variables
+        # Environment variables - simplified without Ray
         self.environment.update({
-            'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',  # Fixed port
+            'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',
             'JUPYTERHUB_BASE_URL': '/',
             'JUPYTERHUB_SERVICE_PREFIX': f'/user/{self.user.name}/',
             'JUPYTERHUB_USER': self.user.name,
             'JUPYTERHUB_CLIENT_ID': f'jupyterhub-user-{self.user.name}',
             'JUPYTERHUB_API_TOKEN': self.api_token,
-            'JUPYTERHUB_SERVICE_URL': f'http://{hub_ip}:18000',  # Fixed port
+            'JUPYTERHUB_SERVICE_URL': f'http://{hub_ip}:18000',
 
-            # Multi-node metadata
+            # Multi-node metadata (basic info only)
             'JUPYTER_NODE_TYPE': 'primary',
             'JUPYTER_NODE_HOSTNAME': primary_node.get('hostname', 'unknown'),
             'JUPYTER_TOTAL_NODES': str(len(self.selected_nodes)),
@@ -397,24 +392,16 @@ class MultiNodeSpawner(DockerSpawner):
             'JUPYTER_PROFILE_ID': str(form_data.get('profile_id', 1)),
         })
 
-        # Add Ray configuration for multi-node
+        # Add worker info if we have multiple nodes (without Ray specifics)
         if len(self.selected_nodes) > 1:
             worker_ips = ','.join([n['ip'] for n in self.selected_nodes[1:]])
             worker_hostnames = ','.join([n.get('hostname', f'worker-{i}') for i, n in enumerate(self.selected_nodes[1:])])
 
             self.environment.update({
-                'RAY_ENABLED': 'true',
-                'RAY_HEAD_NODE': node_ip,
-                'RAY_DASHBOARD_HOST': '0.0.0.0',
-                'RAY_DASHBOARD_PORT': '8265',
                 'JUPYTER_WORKER_IPS': worker_ips,
                 'JUPYTER_WORKER_HOSTNAMES': worker_hostnames,
             })
-            self.log.info(f"[RAY] Configured Ray head node: {node_ip}")
-        else:
-            self.environment.update({
-                'RAY_ENABLED': 'false'
-            })
+            self.log.info(f"[MULTI_NODE] Worker nodes: {worker_ips}")
 
         # Jupyter configuration
         self.args = [
@@ -443,11 +430,9 @@ class MultiNodeSpawner(DockerSpawner):
 
         self.log.info(f"[PRIMARY] About to start container with image: {self.image}")
 
-        # CRITICAL FIX: Set default image before calling super().start() to avoid validation issues
+        # Set default image before calling super().start()
         original_default_image = getattr(self, 'default_image', None)
         self.default_image = image
-        
-        # Also set the image attribute directly
         self._image = image
         
         self.log.info(f"[DEBUG] Set default_image to: {self.default_image}")
@@ -485,28 +470,20 @@ class MultiNodeSpawner(DockerSpawner):
 
         host_port = ports["8888/tcp"][0]["HostPort"]
         
-        # CRITICAL FIX: Set all IP/port attributes consistently
+        # Set all IP/port attributes consistently
         self._ip = node_ip
         self._port = int(host_port)
         self.server_ip = node_ip
         self.server_port = str(host_port)
-        
-        # Also set the properties directly for JupyterHub
         self.ip = node_ip
         self.port = int(host_port)
         
         self.log.info(f"[PRIMARY] All IP/port attributes set:")
-        self.log.info(f"[PRIMARY] - self._ip: {self._ip}")
-        self.log.info(f"[PRIMARY] - self._port: {self._port}")
-        self.log.info(f"[PRIMARY] - self.ip: {self.ip}")
-        self.log.info(f"[PRIMARY] - self.port: {self.port}")
-        self.log.info(f"[PRIMARY] - self.server_ip: {self.server_ip}")
-        self.log.info(f"[PRIMARY] - self.server_port: {self.server_port}")
-
+        self.log.info(f"[PRIMARY] - IP: {self.ip}, Port: {self.port}")
         self.log.info(f"[PRIMARY] Jupyter running at http://{self.ip}:{self.port}")
 
     async def _start_worker_containers(self, form_data):
-        """Start worker containers on additional nodes"""
+        """Start worker containers on additional nodes - simplified"""
         worker_nodes = self.selected_nodes[1:]
         self.log.info(f"[WORKERS] Starting {len(worker_nodes)} worker containers")
 
@@ -518,11 +495,11 @@ class MultiNodeSpawner(DockerSpawner):
                 # Continue with other workers even if one fails
 
     async def _start_single_worker(self, worker_node, worker_index, form_data):
-        """Start a single worker container"""
+        """Start a single worker container - simplified"""
         worker_host = f"tcp://{worker_node['ip']}:2375"
         worker_client = self._get_docker_client(worker_host)
 
-        # CRITICAL FIX: Ensure container name is valid
+        # Container name
         base_name = getattr(self, 'name', f'jupyterlab-{self.user.name}')
         if not base_name or base_name.strip() == '':
             base_name = f'jupyterlab-{self.user.name}'
@@ -530,16 +507,17 @@ class MultiNodeSpawner(DockerSpawner):
         container_name = f"{base_name}-worker-{worker_index}"
         self.log.info(f"[WORKER] Creating container: {container_name}")
 
-        # Worker environment (inherit from primary + worker-specific vars)
-        worker_env = self.environment.copy()
-        worker_env.update({
+        # Worker environment (basic info only, no Ray)
+        worker_env = {
             'JUPYTER_NODE_TYPE': 'worker',
             'JUPYTER_NODE_HOSTNAME': worker_node.get('hostname', f'worker-{worker_index}'),
             'JUPYTER_WORKER_INDEX': str(worker_index),
             'JUPYTER_PRIMARY_IP': self.selected_nodes[0]['ip'],
             'JUPYTER_PRIMARY_PORT': str(self.port),
-            'RAY_ADDRESS': f"{self.selected_nodes[0]['ip']}:10001",  # Connect to Ray head
-        })
+            'JUPYTER_TOTAL_NODES': str(len(self.selected_nodes)),
+            'JUPYTER_PROFILE_NAME': form_data.get('profile_name', 'unknown'),
+            'JUPYTER_PROFILE_ID': str(form_data.get('profile_id', 1)),
+        }
 
         # Container configuration
         container_config = {
@@ -555,7 +533,14 @@ class MultiNodeSpawner(DockerSpawner):
                 },
                 runtime='nvidia' if 'gpu' in self.image.lower() else None
             ),
-            'command': None
+            'command': [
+                'jupyter', 'lab',
+                '--ip=0.0.0.0',
+                '--port=8888',
+                '--allow-root',
+                '--no-browser',
+                f'--notebook-dir=/home/jovyan'
+            ]
         }
 
         # Create and start container

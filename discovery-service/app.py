@@ -1,9 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
-# from flasgger import Swagger
-import logging
-import os
 
 # Import configuration
 from config import Config
@@ -15,6 +12,9 @@ from models import db
 from routes.node_routes import node_bp
 from routes.profile_routes import profile_bp
 
+import logging
+import os
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DiscoveryAPI")
@@ -22,7 +22,6 @@ logger = logging.getLogger("DiscoveryAPI")
 def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
-    # swagger = Swagger(app) # add swagger
 
     # Load configuration
     app.config.from_object(Config)

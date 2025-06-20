@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Control Jupyter Server</title>
+    <link rel="stylesheet" href="/form/style.css">
+</head>
+<body>
+<div class="container">
+    <h2 style="margin-bottom: 12px;">Server Control Panel</h2>
+    <p>Berikut adalah konfigurasi yang telah dipilih. Kamu bisa start atau stop server JupyterLab dari sini.</p>
+
+    <div class="card" id="summary-card">
+        <h3 class="section-title">Configuration Summary</h3>
+        <div id="config-summary">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3 class="section-title">Server Control</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="launch-button" style="background: #a2c3be;"onclick="startServer()">Start Server</button>
+            <button class="launch-button" style="background: #dc3545;" onclick="stopServer()">Stop Server</button>
+        </div>
+        <div id="action-result" style="margin-top: 16px; font-size: 14px; color: #004085;"></div>
+    </div>
+</div>
+
+<script>
+    const config = JSON.parse(localStorage.getItem("profile_selection"));
+    const summaryBox = document.getElementById("config-summary");
+    const actionResult = document.getElementById("action-result");
+    const username = window.jupyterhub_user || "YOUR_USERNAME"; // replace if needed
+
+    if (config) {
+        const nodeList = config.selected_nodes.map(n => `<li>${n.hostname} (${n.ip})</li>`).join('');
+        summaryBox.innerHTML = `
+            <p><strong>Profile:</strong> ${config.profile_name}</p>
+            <p><strong>Image:</strong> ${config.image}</p>
+            <p><strong>Node Count:</strong> ${config.node_count}</p>
+            <p><strong>Primary Node:</strong> ${config.primary_node}</p>
+            <ul>${nodeList}</ul>
+        `;
+    } else {
+        summaryBox.innerHTML = "<p style='color:red;'>No profile configuration found. Please go back and select one.</p>";
+    }
+
+    async function startServer() {
+        actionResult.textContent = "Starting server...";
+        try {
+            const resp = await fetch(`/hub/api/users/${username}/server`, {
+                method: "POST",
+                credentials: "same-origin", // send cookies
+                headers: { "Content-Type": "application/json" }
+            });
+
+            if (resp.ok) {
+                actionResult.textContent = "✅ Server started successfully.";
+            } else {
+                const err = await resp.json();
+                actionResult.textContent = "❌ Failed to start server: " + err.message;
+            }
+        } catch (err) {
+            actionResult.textContent = "❌ Error starting server: " + err.message;
+        }
+    }
+
+    async function stopServer() {
+        actionResult.textContent = "Stopping server...";
+        try {
+            const resp = await fetch(`/hub/api/users/${username}/server`, {
+                method: "DELETE",
+                credentials: "same-origin"
+            });
+
+            if (resp.ok) {
+                actionResult.textContent = "🛑 Server stopped successfully.";
+            } else {
+                const err = await resp.json();
+                actionResult.textContent = "❌ Failed to stop server: " + err.message;
+            }
+        } catch (err) {
+            actionResult.textContent = "❌ Error stopping server: " + err.message;
+        }
+    }
+</script>
+</body>
+</html>

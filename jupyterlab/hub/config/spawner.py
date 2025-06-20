@@ -91,6 +91,11 @@ def configure_spawner(c):
 
     c.DockerSpawner.image = "danielcristh0/jupyterlab:cpu"
     c.DockerSpawner.notebook_dir = "/home/jovyan/work"
+    
+    # c.DockerSpawner.volumes = {
+    #     '/srv/jupyterhub/userdata/{username}': '/home/jovyan/work',
+    # }
+
     c.DockerSpawner.volumes = {
         "jupyterhub-user-{username}": "/home/jovyan/work"
     }
@@ -100,10 +105,10 @@ def configure_spawner(c):
     c.DockerSpawner.debug = True
     c.DockerSpawner.use_internal_ip = False
 
-    c.JupyterHub.hub_ip = '192.168.122.1'
-    c.JupyterHub.hub_port = 8081
-    c.JupyterHub.port = 8000
-    c.JupyterHub.log_level = 'DEBUG'
+    # c.JupyterHub.hub_ip = '192.168.122.1'
+    # c.JupyterHub.hub_port = 8081
+    # c.JupyterHub.port = 8000
+    # c.JupyterHub.log_level = 'DEBUG'
 
     c.Authenticator.admin_users = {'admin'}
 

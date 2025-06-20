@@ -1,100 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/form/style.css">
-    <!-- <title>JupyterHub - Start Server</title> -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="/form/style.css" />
+  <title>JupyterHub Profile Selection</title>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <!-- <div class="header">
-            <h2>Start Your JupyterLab Server</h2>
-            <p>Select your computing profile and environment</p>
-        </div> -->
+  <div class="container">
 
-        <!-- Status Bar -->
-        <div class="status-bar" id="status-bar">
-            <div class="status-item info">
-                <span class="status-icon">⏳</span>
-                <span>Connecting to service...</span>
-            </div>
-        </div>
-
-        <!-- Profile Selection -->
-        <div class="card">
-            <h3 class="section-title">Select Profile</h3>
-            <div id="profile-grid" class="profile-grid">
-                <div class="loading">
-                    <span class="spinner"></span>
-                    Loading profiles...
-                </div>
-            </div>
-        </div>
-
-        <!-- Environment Configuration -->
-        <div class="card">
-            <h3 class="section-title">Environment Configuration</h3>
-
-            <div class="form-group">
-                <label class="form-label">Docker Image</label>
-                <select name="image" id="image">
-                    <!-- CRITICAL FIX: Use exact image names as values -->
-                    <option value="danielcristh0/jupyterlab:cpu">CPU Environment (danielcristh0/jupyterlab:cpu)</option>
-                    <option value="danielcristh0/jupyterlab:gpu">GPU Environment (danielcristh0/jupyterlab:gpu)</option>
-                </select>
-                <div class="form-help">Choose CPU for general computing or GPU for machine learning tasks</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Node Configuration</label>
-                <div class="toggle-group">
-                    <div class="toggle-item">
-                        <input type="radio" name="node_count" value="1" id="single" checked>
-                        <label for="single">Single Node</label>
-                    </div>
-                    <div class="toggle-item" id="multi-toggle">
-                        <input type="radio" name="node_count" value="multi" id="multi">
-                        <label for="multi">Multi Node</label>
-                    </div>
-                </div>
-
-                <div id="multi-config" class="hidden">
-                    <select id="num_nodes">
-                        <option value="2">2 Nodes - Small cluster</option>
-                        <option value="3">3 Nodes - Medium cluster</option>
-                        <option value="4">4 Nodes - Large cluster</option>
-                    </select>
-                    <div class="form-help">Additional nodes will be used for distributed computing</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Node Selection -->
-        <div class="card">
-            <h3 class="section-title">Available Nodes</h3>
-            <div id="node-list" class="node-list">
-                <div class="loading">
-                    <span class="spinner"></span>
-                    Discovering available nodes...
-                </div>
-            </div>
-
-            <div id="selection-summary" class="summary-box hidden">
-                <div class="summary-title">Selection Summary</div>
-                <div class="summary-content" id="summary-content"></div>
-            </div>
-        </div>
-
-        <!-- Hidden fields for JupyterHub -->
-        <input type="hidden" name="profile_id" id="profile_id">
-        <input type="hidden" name="profile_name" id="profile_name">
-        <input type="hidden" name="selected_nodes" id="selected_nodes">
-        <input type="hidden" name="primary_node" id="primary_node">
-        <input type="hidden" name="node_count_final" id="node_count_final" value="1">
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-item info">
+        <span class="status-icon">⏳</span>
+        <span>Connecting to service...</span>
+      </div>
     </div>
 
-    <script src="/form/main.js"></script>
+    <!-- Profile Selection -->
+    <div class="card">
+      <h3 class="section-title">Select Profile</h3>
+      <div id="profile-grid" class="profile-grid">
+        <div class="loading">
+          <span class="spinner"></span>
+          Loading profiles...
+        </div>
+      </div>
+    </div>
+
+    <!-- Environment Configuration -->
+    <div class="card">
+      <h3 class="section-title">Environment Configuration</h3>
+
+      <div class="form-group">
+        <label class="form-label">Docker Image</label>
+        <select name="image" id="image">
+          <option value="danielcristh0/jupyterlab:cpu">CPU Environment (danielcristh0/jupyterlab:cpu)</option>
+          <option value="danielcristh0/jupyterlab:gpu">GPU Environment (danielcristh0/jupyterlab:gpu)</option>
+        </select>
+        <div class="form-help">Choose CPU for general computing or GPU for machine learning tasks</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Node Configuration</label>
+        <div class="toggle-group">
+          <div class="toggle-item">
+            <input type="radio" name="node_count" value="1" id="single" checked />
+            <label for="single">Single Node</label>
+          </div>
+          <div class="toggle-item" id="multi-toggle">
+            <input type="radio" name="node_count" value="multi" id="multi" />
+            <label for="multi">Multi Node</label>
+          </div>
+        </div>
+
+        <div id="multi-config" class="hidden">
+          <select id="num_nodes">
+            <option value="2">2 Nodes - Small cluster</option>
+            <option value="3">3 Nodes - Medium cluster</option>
+            <option value="4">4 Nodes - Large cluster</option>
+          </select>
+          <div class="form-help">Additional nodes will be used for distributed computing</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Node Selection -->
+    <div class="card">
+      <h3 class="section-title">Available Nodes</h3>
+      <div id="node-list" class="node-list">
+        <div class="loading">
+          <span class="spinner"></span>
+          Discovering available nodes...
+        </div>
+      </div>
+
+      <div id="selection-summary" class="summary-box hidden">
+        <div class="summary-title">Selection Summary</div>
+        <div class="summary-content" id="summary-content"></div>
+      </div>
+    </div>
+
+    <!-- Hidden Fields (optional use in JS, no submit) -->
+    <input type="hidden" name="profile_id" id="profile_id" />
+    <input type="hidden" name="profile_name" id="profile_name" />
+    <input type="hidden" name="selected_nodes" id="selected_nodes" />
+    <input type="hidden" name="primary_node" id="primary_node" />
+    <input type="hidden" name="node_count_final" id="node_count_final" value="1" />
+
+    <!-- Next Button -->
+    <!-- <button id="next-button" class="launch-button">Next ➜</button>
+  </div> -->
+
+  <script src="/form/main.js"></script>
 </body>
 </html>

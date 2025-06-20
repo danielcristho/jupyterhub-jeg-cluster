@@ -200,9 +200,8 @@ async function selectProfile(profile) {
         document.getElementById('image').value = 'danielcristh0/jupyterlab:cpu';
     }
     
-    // CRITICAL FIX: Log the selected image for debugging
     const selectedImage = document.getElementById('image').value;
-    console.log('[DEBUG] Profile selected, image set to:', selectedImage);
+    // console.log('[DEBUG] Profile selected, image set to:', selectedImage);
 
     // Load and display nodes
     await displayNodes();
@@ -241,7 +240,6 @@ async function displayNodes() {
         }
     } catch (e) {
         console.error('Error selecting nodes:', e);
-        // Fallback: show available nodes
         if (nodes.length > 0) {
             const suitable = nodes.filter(n => nodeMatchesProfile(n, selectedProfile));
             if (suitable.length > 0) {
@@ -339,10 +337,9 @@ function renderNodes(nodesList) {
         nodeList.appendChild(nodeDiv);
     });
 
-    // CRITICAL FIX: Convert selectedNodes to JSON string before setting
-    console.log('[DEBUG] selectedNodes before JSON.stringify:', selectedNodes);
+    // console.log('[DEBUG] selectedNodes before JSON.stringify:', selectedNodes);
     const selectedNodesJson = JSON.stringify(selectedNodes);
-    console.log('[DEBUG] selectedNodes JSON string:', selectedNodesJson);
+    // console.log('[DEBUG] selectedNodes JSON string:', selectedNodesJson);
     
     document.getElementById('selected_nodes').value = selectedNodesJson;
     document.getElementById('node_count_final').value = selectedNodes.length;
@@ -458,7 +455,7 @@ document.querySelector("form").addEventListener("submit", function (e) {
         return;
     }
     
-    // Final form data logging for debugging
+    // Console log for debugging
     console.log('[SUBMIT] Form data summary:');
     console.log('- Profile ID:', document.getElementById('profile_id').value);
     console.log('- Profile Name:', document.getElementById('profile_name').value);
