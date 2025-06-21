@@ -2,7 +2,7 @@
 .terraformrc
 terraform.rc
 
-# K3S
+# Kubernetes
 token
 kubeconfig
 
@@ -16,7 +16,10 @@ env/
 venv/
 .env/
 .venv/
-__pycache__
+__pycache__/
+
+# Flask
+migrations/
 
 # Personal Lab
 netics
