@@ -16,6 +16,7 @@ env/
 venv/
 .env/
 .venv/
+__pycache__
 
 # Personal Lab
 netics
