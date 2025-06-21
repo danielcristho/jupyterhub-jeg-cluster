@@ -1,0 +1,14 @@
+jupyterhub==5.3.0
+jupyterlab>=4.0.0,<5.0.0
+notebook>=7.0.0
+jupyter-server>=2.0.0
+ipython>=8.0.0
+ipykernel
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+scikit-learn
+nbconvert
+ipywidgets

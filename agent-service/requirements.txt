@@ -1,0 +1,5 @@
+requests
+psutil
+gpustat
+docker
+dotenv

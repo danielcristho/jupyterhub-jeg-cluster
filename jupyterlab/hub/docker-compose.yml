@@ -1,0 +1,122 @@
+version: "3.8"
+
+services:
+  proxy:
+    image: jupyterhub/configurable-http-proxy:4
+    container_name: proxy
+    networks:
+      - jupyterhub-network
+    ports:
+      - "18000:8000"
+    expose:
+      - "8001"
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - CONFIGPROXY_AUTH_TOKEN=${CONFIGPROXY_AUTH_TOKEN}
+    command:
+      - configurable-http-proxy
+      - "--ip=0.0.0.0"
+      - "--port=8000"
+      - "--api-ip=0.0.0.0"
+      - "--api-port=8001"
+      - "--error-target=http://hub:8081/hub/error"
+      - "--log-level=info"
+      - "--default-target=http://hub:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - hub
+
+  hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    image: jupyterhub
+    container_name: jupyterhub
+    networks:
+      - jupyterhub-network
+    volumes:
+      - "./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "jupyterhub-data:/data"
+      - "shared-data:/home/jovyan/shared"
+      - "./data:/srv/jupyterhub/data"
+    user: root
+    command: jupyterhub --config /srv/jupyterhub/jupyterhub_config.py
+    expose:
+      - "8081"
+    env_file: .env
+    environment:
+      - POSTGRES_HOST=192.168.122.1
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=calipso
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/hub/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - jupyterhub-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=monitoring
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - jupyterhub-network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - jupyterhub-network
+
+volumes:
+  jupyterhub-data:
+  shared-data:
+  grafana_data:
+  prometheus_data:
+
+networks:
+  jupyterhub-network:
+    driver: bridge

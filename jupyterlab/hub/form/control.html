@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Control Jupyter Server</title>
+    <link rel="stylesheet" href="/hub/form/style.css">
+    <style>
+        .launch-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 style="margin-bottom: 12px;">Server Control Panel</h2>
+    <p style="margin-bottom: 24px;">Berikut adalah konfigurasi yang telah Anda pilih. Anda bisa memulai atau menghentikan server dari sini. Halaman ini akan kedaluwarsa jika Anda menutup browser.</p>
+
+    <div class="card" id="summary-card">
+        <h3 class="section-title">Configuration Summary</h3>
+        <div id="config-summary">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3 class="section-title">Server Control</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="launch-button" style="background: #28a745;" onclick="startServer()">Start Server</button>
+            <button class="launch-button" style="background: #dc3545;" onclick="stopServer()">Stop Server</button>
+        </div>
+        <div id="action-result" style="margin-top: 16px; font-size: 14px; padding: 12px; border-radius: 6px;"></div>
+    </div>
+
+     <div style="margin-top: 24px; text-align: center;">
+        <a href="/hub/spawn" style="color: #007bff; text-decoration: none;">&larr; Back to Profile Selection</a>
+    </div>
+</div>
+
+<script>
+    const actionResult = document.getElementById("action-result");
+    
+    // Ambil username dari variabel global JupyterHub
+    const username = document.cookie.split('; ').find(row => row.startsWith('jupyterhub-hub-login='))?.split('=')[1] || "user-not-found";
+
+    // Baca konfigurasi dari localStorage
+    const config = JSON.parse(localStorage.getItem("jupyterhub_spawn_config"));
+
+    // Tampilkan ringkasan
+    const summaryBox = document.getElementById("config-summary");
+    if (config && config.selected_nodes) {
+        const nodeList = config.selected_nodes.map(n => `<li>${n.hostname} (${n.ip})</li>`).join('');
+        summaryBox.innerHTML = `
+            <ul style="list-style: none; padding-left: 0;">
+                <li><strong>Profile:</strong> ${config.profile_name}</li>
+                <li><strong>Image:</strong> ${config.image}</li>
+                <li><strong>Node Count:</strong> ${config.node_count}</li>
+                <li><strong>Primary Node:</strong> ${config.primary_node}</li>
+                <li><strong>Selected Nodes:</strong><ul>${nodeList}</ul></li>
+            </ul>
+        `;
+    } else {
+        summaryBox.innerHTML = "<p style='color:red;'>No profile configuration found. Please go back and select one.</p>";
+        document.querySelector('button').disabled = true;
+    }
+
+    function startServer() {
+        if (!config) {
+            alert("Configuration not found!");
+            return;
+        }
+
+        actionResult.textContent = "🚀 Preparing to launch... Forwarding to spawner.";
+        actionResult.style.background = "#e7f3ff";
+
+        // 1. Buat form virtual di memori
+        const form = document.createElement('form');
+        form.method = 'post';
+        // URL action harus ke /hub/spawn, ini adalah endpoint spawner
+        form.action = `/hub/spawn`; 
+        form.style.display = 'none'; // Sembunyikan form
+
+        // 2. Isi form dengan data dari localStorage
+        const inputs = {
+            "profile_id": config.profile_id,
+            "profile_name": config.profile_name,
+            "image": config.image,
+            "selected_nodes": JSON.stringify(config.selected_nodes),
+            "primary_node": config.primary_node,
+            "node_count_final": config.node_count,
+        };
+
+        for (const key in inputs) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = inputs[key];
+            form.appendChild(input);
+        }
+
+        // 3. Tambahkan form ke body, kirim, lalu hapus
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    }
+
+    async function stopServer() {
+        actionResult.textContent = "Stopping server...";
+        actionResult.style.background = "#fff3cd";
+        try {
+            const resp = await fetch(`/hub/api/users/${username}/server`, {
+                method: "DELETE"
+            });
+            if (resp.status === 202 || resp.status === 204) {
+                actionResult.textContent = "Server stopped successfully.";
+                actionResult.style.background = "#d4edda";
+            } else {
+                const err = await resp.json();
+                actionResult.textContent = "Failed to stop server: " + (err.message || resp.statusText);
+                actionResult.style.background = "#f8d7da";
+            }
+        } catch (err) {
+            actionResult.textContent = "Error stopping server: " + err.message;
+            actionResult.style.background = "#f8d7da";
+        }
+    }
+</script>
+</body>
+</html>
