@@ -90,7 +90,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=monitoring
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      # - ./grafana/provisioning:/etc/grafana/provisioning
     networks:
       - jupyterhub-network
 

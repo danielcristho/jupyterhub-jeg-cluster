@@ -5,7 +5,7 @@ from flask_migrate import Migrate
 # Import configuration
 from config import Config
 
-# Import models and database
+# IMport models
 from models import db
 
 # Import blueprints
@@ -15,18 +15,14 @@ from routes.profile_routes import profile_bp
 import logging
 import os
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DiscoveryAPI")
 
 def create_app():
-    """Application factory pattern"""
     app = Flask(__name__)
 
-    # Load configuration
     app.config.from_object(Config)
 
-    # Initialize extensions
     CORS(app, origins="*")
     db.init_app(app)
     Migrate(app, db)

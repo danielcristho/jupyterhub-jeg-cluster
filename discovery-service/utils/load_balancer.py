@@ -2,7 +2,7 @@ import threading
 from typing import List, Dict, Optional
 from utils.scoring import calculate_node_score
 
-# Global round-robin counter
+# round-robin counter
 _round_robin_counter = 0
 _counter_lock = threading.Lock()
 
@@ -106,7 +106,6 @@ def distribute_load(nodes: List[Dict],
             distribution[hostname] += units
             remaining -= units
 
-        # Move to next node if current is at capacity
         if distribution[hostname] >= max_per_node:
             node_index += 1
         else:
