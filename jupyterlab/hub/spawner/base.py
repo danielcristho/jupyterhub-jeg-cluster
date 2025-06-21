@@ -370,11 +370,9 @@ class MultiNodeSpawner(DockerSpawner):
         # Hub configuration
         hub_ip = "192.168.122.1"
 
-        # Set image as user option to bypass validation
         self.user_options['image'] = image
         self.log.info(f"[DEBUG] Set user_options image to: {self.user_options.get('image')}")
 
-        # Environment variables - simplified without Ray
         self.environment.update({
             'JUPYTERHUB_API_URL': f'http://{hub_ip}:18000/hub/api',
             'JUPYTERHUB_BASE_URL': '/',
@@ -507,7 +505,6 @@ class MultiNodeSpawner(DockerSpawner):
         container_name = f"{base_name}-worker-{worker_index}"
         self.log.info(f"[WORKER] Creating container: {container_name}")
 
-        # Worker environment (basic info only, no Ray)
         worker_env = {
             'JUPYTER_NODE_TYPE': 'worker',
             'JUPYTER_NODE_HOSTNAME': worker_node.get('hostname', f'worker-{worker_index}'),

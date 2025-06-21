@@ -26,7 +26,6 @@ def configure_hub(c):
     c.JupyterHub.allow_named_servers = False            # Disable named servers per user
 
     # === Database Configuration ===
-    # Read DB credentials from environment variables (recommended for security)
     db_host = os.getenv("POSTGRES_HOST")
     db_port = os.getenv("POSTGRES_PORT")
     db_user = os.getenv("POSTGRES_USER")
@@ -38,7 +37,7 @@ def configure_hub(c):
     # c.JupyterHub.db_url = 'sqlite:///data/jupyterhub.sqlite'
 
     # === Additional services ===
-    c.JupyterHub.metrics_enabled = True                 # Enable Prometheus metrics
+    c.JupyterHub.metrics_enabled = True        
 
     c.JupyterHub.services = [
         {

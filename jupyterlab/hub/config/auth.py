@@ -1,7 +1,5 @@
 """
-Handle Authenctication
-
-- Using nativeauthenticator
+Handle Authenctication, using nativeauthenticator
 """
 
 import os
