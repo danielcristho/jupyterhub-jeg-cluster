@@ -4,11 +4,20 @@ notebook>=7.0.0
 jupyter-server>=2.0.0
 ipython>=8.0.0
 ipykernel
+
+ray==2.46
+
 pandas
 numpy
 matplotlib
 seaborn
 plotly
 scikit-learn
+
+# GPU Deps
+torch==2.2.1
+torchvision==0.17.1
+torchaudio==2.2.1
+
 nbconvert
 ipywidgets

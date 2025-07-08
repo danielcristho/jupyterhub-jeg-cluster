@@ -37,6 +37,7 @@ data/
 # Log & Secret file
 *.log
 *.secret
+ssh_keys/
 
 # Database
 *.sql

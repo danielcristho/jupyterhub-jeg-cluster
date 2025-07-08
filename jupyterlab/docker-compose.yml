@@ -8,8 +8,6 @@ services:
       - jupyterhub-network
     ports:
       - "18000:8000"
-    expose:
-      - "8001"
     restart: unless-stopped
     env_file: .env
     environment:
@@ -23,46 +21,72 @@ services:
       - "--error-target=http://hub:8081/hub/error"
       - "--log-level=info"
       - "--default-target=http://hub:8081"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     depends_on:
       - hub
 
   hub:
     build:
-      context: .
+      context: ./hub/
       dockerfile: Dockerfile
     restart: unless-stopped
-    image: jupyterhub
+    image:  danielcristh0/jupyterhub:1.1
     container_name: jupyterhub
     networks:
       - jupyterhub-network
     volumes:
-      - "./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro"
+      - "./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "jupyterhub-data:/data"
-      - "shared-data:/home/jovyan/shared"
-      - "./data:/srv/jupyterhub/data"
+      - "/opt/jupyterhub/kernels:/srv/jupyterhub/kernels"
+      - "./hub/data:/srv/jupyterhub/data"
     user: root
     command: jupyterhub --config /srv/jupyterhub/jupyterhub_config.py
     expose:
       - "8081"
     env_file: .env
     environment:
+      # - JUPYTER_GATEWAY_URL=http://192.168.122.1:8889
+      - JUPYTER_GATEWAY_URL=http://jeg:8889 
       - POSTGRES_HOST=192.168.122.1
       - POSTGRES_PORT=5432
       - POSTGRES_DB=calipso
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18000/hub/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-  
+  jeg:
+    build:
+      context: ./jeg
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    image:  danielcristh0/gateway:1.1
+    container_name: jeg
+    networks:
+      - jupyterhub-network
+    ports:
+      - "8889:8889"
+      - "8877:8877"
+    volumes:
+      # - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/opt/jupyterhub/kernels:/usr/local/share/jupyter/kernels"
+      # - "~/.ssh/id_rsa:/tmp/.ssh/id_rsa:rw"
+      # - "~/.ssh/id_rsa.pub:/tmp/.ssh/id_rsa.pub:rw"
+      - ./jeg/launch_ipykernel.py:/usr/local/share/jupyter/kernels/python_distributed/scripts/launch_ipykernel.py
+      # - "./jeg/ssh_keys:/tmp/.ssh"
+
+    depends_on:
+      - hub
+    environment:
+      - EG_LOG_LEVEL=DEBUG
+      - EG_AUTH_TOKEN=jeg-jeg-an
+      - EG_REMOTE_USER=root
+      - EG_REMOTE_PWD=whoami
+      - EG_REMOTE_GSS_SSH=True
+      - EG_ALLOW_ORIGIN=*
+      - EG_KERNEL_WHITELIST=[]
+      - EG_IP=0.0.0.0
+      - EG_PORT=8889
+      - EG_RESPONSE_IP=192.168.122.1
+      - EG_RESPONSE_PORT=8877
+      - EG_RESPONSE_ADDR_ANY=true
+      - JUPYTER_GATEWAY_HOST=0.0.0.0
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -73,14 +97,8 @@ services:
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
     networks:
       - jupyterhub-network
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -90,7 +108,6 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=monitoring
     volumes:
       - grafana_data:/var/lib/grafana
-      # - ./grafana/provisioning:/etc/grafana/provisioning
     networks:
       - jupyterhub-network
 
@@ -105,18 +122,14 @@ services:
       - /:/rootfs:ro
     command:
       - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - jupyterhub-network
 
 volumes:
   jupyterhub-data:
-  shared-data:
   grafana_data:
   prometheus_data:
 
 networks:
   jupyterhub-network:
-    driver: bridge
+    external: true

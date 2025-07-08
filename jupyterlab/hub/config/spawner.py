@@ -104,6 +104,8 @@ def configure_spawner(c):
     c.DockerSpawner.remove = True
     c.DockerSpawner.debug = True
     c.DockerSpawner.use_internal_ip = False
+    c.DockerSpawner.network_name = 'jupyterhub-network'
+    
 
     # c.JupyterHub.hub_ip = '192.168.122.1'
     # c.JupyterHub.hub_port = 8081

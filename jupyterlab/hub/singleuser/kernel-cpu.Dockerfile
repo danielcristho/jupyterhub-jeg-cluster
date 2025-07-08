@@ -30,6 +30,7 @@ RUN mkdir -p ${HOME}/work
 RUN mkdir -p ${HOME}/.jupyter
 
 COPY jupyter_server_config.py ${HOME}/.jupyter/jupyter_server_config.py
+
 COPY launch_ipykernel.py /usr/local/bin/launch_ipykernel.py
 
 # Set permissions
@@ -38,7 +39,7 @@ RUN chown -R ${NB_USER}:${NB_USER} ${HOME}
 USER ${NB_USER}
 WORKDIR ${HOME}/work
 
-EXPOSE 8888
+# EXPOSE 8888
 
-ENTRYPOINT ["tini", "--"]
-CMD ["jupyterhub-singleuser"]
+# ENTRYPOINT ["tini", "--"]
+# CMD ["jupyterhub-singleuser"]

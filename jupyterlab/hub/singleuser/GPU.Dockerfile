@@ -35,13 +35,6 @@ RUN pip install --no-cache-dir \
     torchvision==0.17.1 \
     torchaudio==2.2.1
 
-# Add Ray autoconnect script
-COPY 00-ray-init.py /usr/local/share/jupyter/startup/00-ray-init.py
-
-# Set up IPython startup
-RUN mkdir -p ${HOME}/.ipython/profile_default/startup && \
-    cp /usr/local/share/jupyter/startup/00-ray-init.py ${HOME}/.ipython/profile_default/startup/
-
 # Set permissions
 RUN chown -R ${NB_USER}:${NB_USER} ${HOME}
 

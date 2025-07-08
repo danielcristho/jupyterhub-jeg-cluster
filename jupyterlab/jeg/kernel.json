@@ -1,0 +1,14 @@
+{
+  "language": "python",
+  "display_name": "Python 3 (Distributed)",
+  "metadata": {
+    "process_proxy": {
+      "class_name": "enterprise_gateway.services.process_proxies.distributed.DistributedProcessProxy"
+    }
+  },
+  "argv": [
+    "{runtime_dir}/python_distributed/bin/run.sh",
+    "--kernel-id",
+    "{kernel_id}"
+  ]
+}

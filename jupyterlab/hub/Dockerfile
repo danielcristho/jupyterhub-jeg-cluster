@@ -1,5 +1,4 @@
 # syntax=docker/dockerfile:1.3
-# FROM python:3.12-slim
 FROM quay.io/jupyter/base-notebook:hub-5.3.0
 
 USER root
