@@ -1,11 +1,16 @@
 jupyterhub==5.3.0
-jupyterlab>=4.0.0,<5.0.0
-notebook>=7.0.0
-jupyter-server>=2.0.0
-ipython>=8.0.0
-ipykernel
+jupyterlab
+notebook
+jupyter-server
+jupyter-enterprise-gateway==3.2.2
+jupyter-kernel-gateway
 
-ray==2.46
+ipython
+ipykernel
+nbconvert
+ipywidgets
+
+ray==2.46.0
 
 pandas
 numpy
@@ -14,10 +19,13 @@ seaborn
 plotly
 scikit-learn
 
+tornado
+pyzmq
+tqdm
+nbconvert
+ipywidgets
+
 # GPU Deps
 torch==2.2.1
 torchvision==0.17.1
 torchaudio==2.2.1
-
-nbconvert
-ipywidgets

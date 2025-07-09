@@ -46,9 +46,9 @@ services:
     environment:
       # - JUPYTER_GATEWAY_URL=http://192.168.122.1:8889
       - JUPYTER_GATEWAY_URL=http://jeg:8889 
-      - POSTGRES_HOST=192.168.122.1
+      - POSTGRES_HOST=10.33.17.30
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=calipso
+      - POSTGRES_DB=apollo
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
   jeg:
@@ -63,6 +63,7 @@ services:
     ports:
       - "8889:8889"
       - "8877:8877"
+      # - "35000-60000:35000-60000" 
     volumes:
       # - "/var/run/docker.sock:/var/run/docker.sock"
       - "/opt/jupyterhub/kernels:/usr/local/share/jupyter/kernels"
@@ -76,16 +77,17 @@ services:
     environment:
       - EG_LOG_LEVEL=DEBUG
       - EG_AUTH_TOKEN=jeg-jeg-an
-      - EG_REMOTE_USER=root
-      - EG_REMOTE_PWD=whoami
-      - EG_REMOTE_GSS_SSH=True
+      - EG_REMOTE_USER=daniel
+      - EG_REMOTE_PWD=Gu3O18g4Fl08
+      # - EG_REMOTE_GSS_SSH=True
       - EG_ALLOW_ORIGIN=*
       - EG_KERNEL_WHITELIST=[]
       - EG_IP=0.0.0.0
       - EG_PORT=8889
-      - EG_RESPONSE_IP=192.168.122.1
+      - EG_RESPONSE_IP=10.33.17.30
       - EG_RESPONSE_PORT=8877
       - EG_RESPONSE_ADDR_ANY=true
+      - EG_SOCKET_TIMEOUT=2.0
       - JUPYTER_GATEWAY_HOST=0.0.0.0
   prometheus:
     image: prom/prometheus:latest

@@ -12,7 +12,7 @@ class MultiNodeSpawner(DockerSpawner):
     """
     """
     jupyter_gateway_public_url = Unicode(
-        "http://192.168.122.1:8889",
+        "http://10.33.17.30:8889",
         config=True,
         help="URL publik JEG yang bisa dijangkau dari container JupyterLab di worker node."
     ).tag(config=True)
@@ -45,7 +45,7 @@ class MultiNodeSpawner(DockerSpawner):
         """
         """
         env = super().get_env()
-        hub_host = os.environ.get('JUPYTERHUB_HUB_HOST', '192.168.122.1')
+        hub_host = os.environ.get('JUPYTERHUB_HUB_HOST', '10.33.17.30')
         hub_port = os.environ.get('JUPYTERHUB_HUB_PORT', '18000')
         
         env.update({
@@ -69,7 +69,7 @@ class MultiNodeSpawner(DockerSpawner):
             hostname = node.get('hostname', f'node-{i+1}')
             node_id = f"python3-docker-{hostname.lower().replace(' ', '-')}"
             node_type = "Primary" if i == 0 else "Worker"
-            display_name = f"Python 3 (Docker on {hostname})"
+            display_name = f"Python 3 on {hostname}"
 
 
             launcher_script_path = "/usr/local/bin/launch_ipykernel.py"
@@ -101,7 +101,7 @@ class MultiNodeSpawner(DockerSpawner):
                     "argv": argv,
                     "env": {
                         "NODE_IP": node_ip,
-                        "KERNEL_USERNAME": "ray"
+                        "KERNEL_USERNAME": "daniel"
                     }
                 }
             }
@@ -157,7 +157,7 @@ class MultiNodeSpawner(DockerSpawner):
             '--GatewayClient.url=' + self.jupyter_gateway_public_url,
             '--GatewayClient.auth_token=' + self.gateway_auth_token
         ]
-        self.extra_host_config = {'network_mode': 'jupyterhub_network'}
+        self.extra_host_config = {'network_mode': 'jupyterhub-network'}
         _, port = await super().start()
         self.server_ip = str(primary_node['ip']).strip()
         self.server_port = str(port)

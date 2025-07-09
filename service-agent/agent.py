@@ -1,16 +1,44 @@
-import requests
 import socket
 import os
 import psutil
 import docker
 import time
 import gpustat
+import requests
 from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DISCOVERY_URL = os.environ.get("DISCOVERY_URL", "http://127.0.0.1:15002/register-node")
+
+def get_ip_address():
+    """
+    Load int env
+    """
+    target_interface = os.environ.get("AGENT_INTERFACE")
+    all_interfaces = psutil.net_if_addrs()
+
+    if target_interface and target_interface in all_interfaces:
+        for addr in all_interfaces[target_interface]:
+            if addr.family == socket.AF_INET:
+                print(f"[DEBUG] Menggunakan alamat IP {addr.address} yang dispesifikan pada interface {target_interface}")
+                return addr.address
+    
+    print("[DEBUG] AGENT_INTERFACE tidak diset. Mencari IP terbaik...")
+    for interface_name, interface_addresses in all_interfaces.items():
+        if interface_name.startswith(('lo', 'docker', 'veth', 'cni')):
+            continue
+        for addr in interface_addresses:
+            if addr.family == socket.AF_INET and not addr.address.startswith('127.'):
+                 print(f"[DEBUG] Ditemukan IP {addr.address} di {interface_name}")
+                 return addr.address
+
+    print("[WARN] Tidak dapat menemukan IP yang sesuai ketika menggunakan psutil, fallback pakai 'hostname -I'")
+    try:
+        return os.popen("hostname -I").read().strip().split()[0]
+    except IndexError:
+        return "127.0.0.1"
 
 def register():
     print("[DEBUG] adding node...")
@@ -37,18 +65,14 @@ def collect_node_info():
     """Collect node or server info"""
     try:
         hostname = socket.gethostname()
-        ip_address = os.popen("hostname -I").read().strip().split()[0]
+        ip_address = get_ip_address()
+        
         ram_gb = round(psutil.virtual_memory().total / 1e9, 2)
 
-        # CPU & memory usage
         cpu_usage = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage("/")
-
-        # Container info
         container_info = get_container_info()
-
-        # GPU info (single call)
         gpu_stats = get_gpu_stats()
 
         payload = {
@@ -60,7 +84,6 @@ def collect_node_info():
             "ram_gb": ram_gb,
             "max_containers": 10,                          
             "is_active": True,                            
-            
             "cpu_usage_percent": round(cpu_usage, 2),
             "memory_usage_percent": round(memory.percent, 2),
             "disk_usage_percent": round(disk.percent, 2),
@@ -69,7 +92,6 @@ def collect_node_info():
             "total_containers": container_info["total_count"],
             "last_updated": datetime.now().isoformat() + "Z"
         }
-
         return payload
     except Exception as e:
         print(f"[AGENT] Error collecting node info: {e}")
@@ -128,7 +150,7 @@ def get_container_info():
         docker_client = docker.from_env()
         containers = docker_client.containers.list()
         container_info["total_count"] = len(containers)
-        """Count Jupyterlab&Ray Containers"""
+        """Count Jupyterlab & Ray Containers"""
         for container in containers:
             container_name = container.name.lower()
             container_image = container.image.tags[0] if container.image.tags else "unknown"

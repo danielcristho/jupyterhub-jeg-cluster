@@ -38,7 +38,7 @@ class NodeService:
             node.has_gpu = node_data.get('has_gpu', node.has_gpu)
             node.gpu = node_data.get('gpu', [])
             node.is_active = True
-            node.updated_at = datetime.utcnow()
+            node.updated_at = datetime.now()
 
             # Save metric history
             metric = NodeMetric(
@@ -88,7 +88,7 @@ class NodeService:
         return result
 
     def get_available_nodes(self, profile_id: Optional[int] = None,
-                          strict_filter: bool = False) -> List[Dict]:
+                        strict_filter: bool = False) -> List[Dict]:
         """Get available nodes based on criteria"""
         nodes = self.get_all_nodes()
 
@@ -111,10 +111,15 @@ class NodeService:
 
         filtered = []
         for node in nodes:
-            if node.get('cpu_usage_percent', 100) >= max_cpu:
+            
+            cpu_usage = node.get('cpu_usage_percent')
+            if cpu_usage is None or cpu_usage >= max_cpu:
                 continue
-            if node.get('memory_usage_percent', 100) >= max_memory:
+                
+            memory_usage = node.get('memory_usage_percent')
+            if memory_usage is None or memory_usage >= max_memory:
                 continue
+                        
             if max_containers and node.get('total_containers', 0) >= max_containers:
                 continue
 
@@ -182,7 +187,7 @@ class NodeService:
         if not node:
             return []
 
-        since = datetime.utcnow() - timedelta(hours=hours)
+        since = datetime.now() - timedelta(hours=hours)
         metrics = NodeMetric.query.filter(
             and_(
                 NodeMetric.node_id == node.id,
@@ -194,8 +199,7 @@ class NodeService:
 
     def mark_nodes_inactive(self):
         """Mark nodes as inactive if not updated recently"""
-        # This could be run periodically to mark stale nodes
-        threshold = datetime.utcnow() - timedelta(seconds=Config.REDIS_EXPIRE_SECONDS * 2)
+        threshold = datetime.now() - timedelta(seconds=Config.REDIS_EXPIRE_SECONDS * 2)
         Node.query.filter(
             and_(
                 Node.updated_at < threshold,
@@ -206,15 +210,15 @@ class NodeService:
 
     def _node_matches_profile(self, node_dict: dict, profile) -> bool:
         """Check if node matches profile requirements"""
-        # if profile.cpu_requirement and node_dict.get('cpu', 0) < profile.cpu_requirement:
         if profile.cpu_requirement and node_dict.get('cpu_cores', 0) < profile.cpu_requirement:
             return False
         if profile.ram_requirement and node_dict.get('ram_gb', 0) < profile.ram_requirement:
             return False
         if profile.gpu_required and not node_dict.get('has_gpu', False):
             return False
-        if node_dict.get('cpu_usage_percent', 100) > profile.max_cpu_usage:
+        if profile.max_cpu_usage is not None and node_dict.get('cpu_usage_percent', 100) > profile.max_cpu_usage:
             return False
-        if node_dict.get('memory_usage_percent', 100) > profile.max_memory_usage:
+        if profile.max_memory_usage is not None and node_dict.get('memory_usage_percent', 100) > profile.max_memory_usage:
             return False
+        
         return True

@@ -130,7 +130,7 @@ function renderNodes(nodesList) {
         let status = 'healthy';
         let statusText = 'Available';
         if (cpu > 80 || mem > 80) { status = 'overloaded'; statusText = 'High Load'; } 
-        else if (cpu > 60 || mem > 60) { status = 'busy'; statusText = 'Moderate Load'; }
+        else if (cpu > 60 || mem > 60) { status = 'busy'; statusText = 'Medium Load'; }
 
         const nodeDiv = document.createElement('div');
         nodeDiv.className = `node-item ${index === 0 ? 'selected' : ''}`;
@@ -141,11 +141,11 @@ function renderNodes(nodesList) {
             </div>
             <div class="node-specs">
                 <div class="node-spec"><strong>IP:</strong> ${node.ip}</div>
-                <div class="node-spec"><strong>CPU:</strong> ${node.cpu} cores</div>
+                <div class="node-spec"><strong>CPU:</strong> ${node.cpu_cores} cores</div>
                 <div class="node-spec"><strong>Memory:</strong> ${node.ram_gb} GB</div>
                 <div class="node-spec"><strong>Containers:</strong> ${node.total_containers || 0} active</div>
             </div>
-            ${node.has_gpu ? `<div class="gpu-info"><span>GPU: </span><span>${node.gpu && node.gpu[0] ? node.gpu[0].name : 'GPU Available'}</span></div>` : ''}
+            ${node.has_gpu ? `<div class="gpu-info"><span>GPU: </span><span>${node.gpu && node.gpu[0] ? node.gpu[0].name : 'Available'}</span></div>` : ''}
             <div class="node-metrics">
                 <div class="metric"><div class="metric-label">CPU Usage</div><div class="metric-bar"><div class="metric-fill ${cpu > 80 ? 'high' : cpu > 60 ? 'medium' : ''}" style="width: ${cpu}%"></div></div><div class="metric-value">${cpu.toFixed(1)}%</div></div>
                 <div class="metric"><div class="metric-label">Memory Usage</div><div class="metric-bar"><div class="metric-fill ${mem > 80 ? 'high' : mem > 60 ? 'medium' : ''}" style="width: ${mem}%"></div></div><div class="metric-value">${mem.toFixed(1)}%</div></div>
@@ -236,7 +236,7 @@ function updateSummary() {
         return;
     }
 
-    const totalCPU = selectedNodes.reduce((sum, n) => sum + (n.cpu || 0), 0);
+    const totalCPU = selectedNodes.reduce((sum, n) => sum + (n.cpu_cores || 0), 0);
     const totalRAM = selectedNodes.reduce((sum, n) => sum + (n.ram_gb || 0), 0);
     const hasGPU = selectedNodes.some(n => n.has_gpu);
 
@@ -299,7 +299,7 @@ function setupListeners() {
             
             console.log('[NEXT_BUTTON] Saving config to localStorage:', finalConfig);
             localStorage.setItem("jupyterhub_spawn_config", JSON.stringify(finalConfig));
-            window.location.href = '/hub/form/control.html';
+            // window.location.href = '/hub/form/control.html';
         });
     }
 }

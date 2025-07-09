@@ -4,11 +4,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NB_USER=jovyan \
     NB_UID=1000 \
     HOME=/home/jovyan \
-    RAY_ADDRESS=ray://10.21.73.122:10001 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-# Create user
+    # Create user
 RUN adduser --disabled-password --gecos "Default user" \
     --uid ${NB_UID} --home ${HOME} --force-badname ${NB_USER}
 
@@ -19,21 +18,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install JupyterLab and required tools
-RUN pip install --no-cache-dir jupyterlab notebook jupyterhub jupyter-server
+# RUN pip install --no-cache-dir jupyterlab notebook jupyterhub jupyter-server
 
 # Install other Python packages
-COPY requirements.txt /tmp/requirements.txt
+COPY GPU.requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+COPY launch_ipykernel.py /usr/local/bin/launch_ipykernel.py
 
 # # Install GPU-accelerated PyTorch stack
 # RUN pip install --no-cache-dir \
 #     torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu120
 
-# Install GPU-accelerated PyTorch stack (cu120, Python 3.10)
-RUN pip install --no-cache-dir \
-    torch==2.2.1 \
-    torchvision==0.17.1 \
-    torchaudio==2.2.1
+# # Install GPU-accelerated PyTorch stack (cu120, Python 3.10)
+# RUN pip install --no-cache-dir \
+#     torch==2.2.1 \
+#     torchvision==0.17.1 \
+#     torchaudio==2.2.1
 
 # Set permissions
 RUN chown -R ${NB_USER}:${NB_USER} ${HOME}
@@ -42,5 +43,7 @@ USER ${NB_USER}
 WORKDIR ${HOME}
 
 EXPOSE 8888
+
 ENTRYPOINT ["tini", "--"]
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--no-browser", "--NotebookApp.token=''"]
+
+CMD ["jupyterhub-singleuser"]
