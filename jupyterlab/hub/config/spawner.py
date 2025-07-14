@@ -62,7 +62,7 @@ def configure_spawner(c):
 
     c.MultiNodeSpawner.discovery_api_url = os.environ.get(
         'DISCOVERY_API_URL',
-        'http://192.168.122.1:15002'
+        'http://10.33.17.30:15002'
     )
     c.MultiNodeSpawner.enable_multi_node = True
 

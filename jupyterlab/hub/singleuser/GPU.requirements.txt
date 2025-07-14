@@ -18,6 +18,8 @@ matplotlib
 seaborn
 plotly
 scikit-learn
+tensorflow[and-cuda] 
+# tensorflow-gpu
 
 tornado
 pyzmq

@@ -53,16 +53,18 @@ class MultiNodeSpawner(DockerSpawner):
             'JUPYTERHUB_CLIENT_ID': f'jupyterhub-user-{self.user.name}',
             'JUPYTERHUB_USER': self.user.name,
             'JUPYTERHUB_API_URL': f'http://{hub_host}:{hub_port}/hub/api',
-            'KERNEL_USERNAME': 'jovyan'
+            'KERNEL_USERNAME': 'daniel'
         })
         return env
 
     def _generate_kernelspecs_config(self):
         """
+        Integrated jupyterhub with jeg.
         """
         kernelspecs = {}
-        
         kernel_image = self.user_options.get('image', 'elyra/kernel-py:3.2.3')
+        all_node_ips = [str(node['ip']).strip() for node in self.selected_nodes]
+        remote_hosts = ','.join(all_node_ips)
         
         for i, node in enumerate(self.selected_nodes):
             node_ip = str(node['ip']).strip()
@@ -70,7 +72,6 @@ class MultiNodeSpawner(DockerSpawner):
             node_id = f"python3-docker-{hostname.lower().replace(' ', '-')}"
             node_type = "Primary" if i == 0 else "Worker"
             display_name = f"Python 3 on {hostname}"
-
 
             launcher_script_path = "/usr/local/bin/launch_ipykernel.py"
 
@@ -100,8 +101,9 @@ class MultiNodeSpawner(DockerSpawner):
                     },
                     "argv": argv,
                     "env": {
-                        "NODE_IP": node_ip,
-                        "KERNEL_USERNAME": "daniel"
+                        "KERNEL_USERNAME": "daniel",
+                        "EG_REMOTE_HOSTS": remote_hosts,
+                        "EG_REMOTE_HOST": node_ip,
                     }
                 }
             }

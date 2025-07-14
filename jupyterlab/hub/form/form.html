@@ -7,34 +7,51 @@
   <title>JupyterHub Profile Selection</title>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="app">
 
-    <!-- Status Bar -->
     <div class="status-bar" id="status-bar">
-      <div class="status-item info">
-        <span class="status-icon">⏳</span>
-        <span>Connecting to service...</span>
+      <div class="status-item" :class="status.type">
+        <span class="status-icon" v-if="status.type === 'success'">✓</span>
+        <span class="status-icon" v-else-if="status.type === 'warning'">⚠️</span>
+        <span class="status-icon" v-else>⏳</span>
+        <span>{{ status.message }}</span>
       </div>
     </div>
 
-    <!-- Profile Selection -->
     <div class="card">
       <h3 class="section-title">Select Profile</h3>
       <div id="profile-grid" class="profile-grid">
-        <div class="loading">
+        <div class="loading" v-if="!profiles.length && !status.message.includes('Offline')">
           <span class="spinner"></span>
           Loading profiles...
+        </div>
+        <div
+            v-for="profile in profiles"
+            :key="profile.id"
+            class="profile-card"
+            :class="{ selected: selectedProfile && selectedProfile.id === profile.id }"
+            @click="selectProfile(profile)"
+        >
+          <div class="profile-header">
+            <div class="profile-name">{{ getDisplayName(profile.name) }}</div>
+          </div>
+          <div class="profile-desc">{{ profile.description }}</div>
+          <div class="profile-specs">
+            <div class="spec-item"><span>{{ profile.cpu_requirement || 2 }} CPU cores</span></div>
+            <div class="spec-item"><span>{{ profile.ram_requirement || 4 }} GB RAM</span></div>
+            <div class="spec-item"><span>{{ profile.max_nodes > 1 ? `${profile.min_nodes}-${profile.max_nodes} nodes` : '1 node' }}</span></div>
+            <div class="spec-item" v-if="profile.gpu_required"><span>GPU enabled</span></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Environment Configuration -->
-    <div class="card">
+    <div class="card" v-if="selectedProfile">
       <h3 class="section-title">Environment Configuration</h3>
 
       <div class="form-group">
         <label class="form-label">Docker Image</label>
-        <select name="image" id="image">
+        <select v-model="selectedImage">
           <option value="danielcristh0/jupyterlab:cpu">CPU Environment (danielcristh0/jupyterlab:cpu)</option>
           <option value="danielcristh0/jupyterlab:gpu">GPU Environment (danielcristh0/jupyterlab:gpu)</option>
         </select>
@@ -45,54 +62,87 @@
         <label class="form-label">Node Configuration</label>
         <div class="toggle-group">
           <div class="toggle-item">
-            <input type="radio" name="node_count" value="1" id="single" checked />
+            <input type="radio" name="node_count" value="single" id="single" v-model="nodeConfig" @change="displayNodes" />
             <label for="single">Single Node</label>
           </div>
-          <div class="toggle-item" id="multi-toggle">
-            <input type="radio" name="node_count" value="multi" id="multi" />
+          <div class="toggle-item" id="multi-toggle" v-if="isMultiNode">
+            <input type="radio" name="node_count" value="multi" id="multi" v-model="nodeConfig" @change="displayNodes" />
             <label for="multi">Multi Node</label>
           </div>
         </div>
 
-        <div id="multi-config" class="hidden">
-          <select id="num_nodes">
-            <option value="2">2 Nodes - Small cluster</option>
-            <option value="3">3 Nodes - Medium cluster</option>
-            <option value="4">4 Nodes - Large cluster</option>
+        <div id="multi-config" :class="{ 'hidden': !isMultiConfig }">
+          <select v-model="numNodes" @change="displayNodes">
+            <option v-for="n in (selectedProfile ? selectedProfile.max_nodes : 4)" :value="n">{{ n }} Nodes</option>
           </select>
           <div class="form-help">Additional nodes will be used for distributed computing</div>
         </div>
       </div>
     </div>
 
-    <!-- Node Selection -->
-    <div class="card">
+    <div class="card" v-if="selectedProfile">
       <h3 class="section-title">Available Nodes</h3>
       <div id="node-list" class="node-list">
-        <div class="loading">
+        <div class="loading" v-if="isLoading">
           <span class="spinner"></span>
-          Discovering available nodes...
+          Selecting best nodes...
+        </div>
+        <div class="loading" v-else-if="nodeError">{{ nodeError }}</div>
+        <div class="loading" v-else-if="!selectedNodes.length">No suitable nodes could be selected.</div>
+        
+        <div
+            v-for="(node, index) in selectedNodes"
+            :key="node.id"
+            class="node-item"
+            :class="{ selected: index === 0 }"
+        >
+          <div class="node-header">
+            <div class="node-name">{{ node.hostname }} <small v-if="index === 0" style="color: #666; font-weight: normal;">(Primary)</small></div>
+            <div class="node-status" :class="getNodeStatus(node).status"><span style="font-size: 10px;">●</span> {{ getNodeStatus(node).statusText }}</div>
+          </div>
+          <div class="node-specs">
+            <div class="node-spec"><strong>IP:</strong> {{ node.ip }}</div>
+            <div class="node-spec"><strong>CPU:</strong> {{ node.cpu_cores }} cores</div>
+            <div class="node-spec"><strong>Memory:</strong> {{ node.ram_gb }} GB</div>
+            <div class="node-spec"><strong>Containers:</strong> {{ node.total_containers || 0 }} active</div>
+          </div>
+          <div class="gpu-info" v-if="node.has_gpu">
+            <span>GPU: </span>
+            <span>{{ node.gpu_info && node.gpu_info[0] ? node.gpu_info[0].name : 'Available' }}</span>
+          </div>
+          <div class="node-metrics">
+            <div class="metric">
+                <div class="metric-label">CPU Usage</div>
+                <div class="metric-bar"><div class="metric-fill" :class="{ 'medium': getNodeStatus(node).cpu > 60, 'high': getNodeStatus(node).cpu > 80 }" :style="{ width: getNodeStatus(node).cpu + '%' }"></div></div>
+                <div class="metric-value">{{ getNodeStatus(node).cpu.toFixed(1) }}%</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Memory Usage</div>
+                <div class="metric-bar"><div class="metric-fill" :class="{ 'medium': getNodeStatus(node).mem > 60, 'high': getNodeStatus(node).mem > 80 }" :style="{ width: getNodeStatus(node).mem + '%' }"></div></div>
+                <div class="metric-value">{{ getNodeStatus(node).mem.toFixed(1) }}%</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div id="selection-summary" class="summary-box hidden">
+      <div id="selection-summary" class="summary-box" :class="{ hidden: selectedNodes.length === 0 }">
         <div class="summary-title">Selection Summary</div>
-        <div class="summary-content" id="summary-content"></div>
+        <div class="summary-content">
+          <strong>Selected {{ selectedNodes.length }} node{{ selectedNodes.length > 1 ? 's' : '' }}:</strong><br>
+          • Total Resources: {{ totalCPU }} CPU cores, {{ totalRAM }} GB RAM<span v-if="hasGPU">, {{ selectedNodes.filter(n => n.has_gpu).length }} GPU(s)</span>
+          <br v-if="selectedNodes.length > 1">• Primary: {{ selectedNodes[0].hostname }}, Workers: {{ selectedNodes.slice(1).map(n => n.hostname).join(', ') }}
+        </div>
       </div>
     </div>
 
-    <input type="hidden" name="profile_id" id="profile_id" />
-        <input type="hidden" name="profile_name" id="profile_name" />
-        <input type="hidden" name="selected_nodes" id="selected_nodes" />
-        <input type="hidden" name="primary_node" id="primary_node" />
-        <input type="hidden" name="node_count_final" id="node_count_final" value="1" />
+    <input type="hidden" name="profile_id" :value="selectedProfile ? selectedProfile.id : ''" />
+    <input type="hidden" name="profile_name" :value="selectedProfile ? selectedProfile.name : ''" />
+    <input type="hidden" name="image" :value="selectedImage" />
+    <input type="hidden" name="selected_nodes" :value="JSON.stringify(selectedNodes)" />
+    <input type="hidden" name="primary_node" :value="selectedNodes.length > 0 ? selectedNodes[0].hostname : ''" />
+    <input type="hidden" name="node_count_final" :value="selectedNodes.length" />
 
-    <!-- <div class="card" style="text-align: right;">
-      <button id="next-button" class="launch-button" style="background: #f37626; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Next: Review & Launch ➜</button>
-    </div>
-  </div> -->
-
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="/form/main.js"></script>
 </body>
 </html>
-

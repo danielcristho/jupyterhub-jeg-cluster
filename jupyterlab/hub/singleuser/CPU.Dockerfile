@@ -17,7 +17,7 @@ RUN adduser \
     ${NB_USER}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git tini curl iputils-ping \
+    git tini curl iputils-ping python3.10-venv\
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -41,4 +41,5 @@ WORKDIR ${HOME}/work
 EXPOSE 8888
 
 ENTRYPOINT ["tini", "--"]
+
 CMD ["jupyterhub-singleuser"]

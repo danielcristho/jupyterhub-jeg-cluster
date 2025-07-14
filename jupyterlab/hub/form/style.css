@@ -499,3 +499,15 @@ select:focus {
         min-width: 100%;
     }
 }
+
+.node-item.is-disabled {
+    opacity: 0.6;
+    background-color: #fff0f0;
+    border-color: #d9534f;
+    cursor: not-allowed; /* Mengubah kursor mouse */
+}
+
+.node-item.is-disabled:hover {
+    transform: none;
+    box-shadow: none;
+}

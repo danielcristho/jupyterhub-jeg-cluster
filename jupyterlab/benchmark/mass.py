@@ -17,11 +17,11 @@ JUPYTERHUB_URL = args.jupyterhub_url
 DISCOVERY_API_URL = args.discovery_url
 
 TEST_USERS = [
-    ("testuser1", "testuser1"), ("testuser2", "testuser2"), ("testuser3", "testuser3"),
-    ("testuser4", "testuser4"), ("testuser5", "testuser5"), ("testuser6", "testuser6"),
-    ("testuser7", "testuser7"),("testuser8", "testuser8"), ("testuser9", "testuser9"),
-    ("testuser10", "testuser10")
+    (f"testuser{i}", f"testuser{i}") for i in range(1, 11)
+] + [
+    (f"random{i}", "randomuser@00") for i in range(1, 11)
 ]
+
 user_credentials = TEST_USERS[:]
 random.shuffle(user_credentials)
 credentials_lock = Lock()
@@ -45,10 +45,8 @@ class JupyterHubUser(HttpUser):
         print(f"[{self.username}] Memulai virtual user...")
 
         try:
-            # Lakukan GET untuk inisialisasi cookie jar
             self.client.get("/hub/login", name="/hub/login [GET]")
 
-            # Ambil token CSRF TERBARU dari cookie jar
             csrf_token = self.client.cookies.get("_xsrf")
             if not csrf_token:
                 print(f"[{self.username}] Gagal mendapatkan token CSRF.")
@@ -82,7 +80,7 @@ class JupyterHubUser(HttpUser):
                 print(f"[{self.username}] Tidak ada profil tersedia.")
                 return
 
-            selected_profile = next((p for p in profiles if p['name'] == 'single-cpu'), profiles[0])
+            selected_profile = next((p for p in profiles if p['name'] == 'multi-cpu'), profiles[0])
 
             nodes_resp = requests.post(f"{DISCOVERY_API_URL}/select-nodes", json={
                 "profile_id": selected_profile['id'],
@@ -96,7 +94,6 @@ class JupyterHubUser(HttpUser):
                 return
 
             print(f"[{self.username}] Node dan profil siap.")
-            
             current_csrf_token = self.client.cookies.get("_xsrf")
 
             spawn_form_data = {
@@ -116,7 +113,8 @@ class JupyterHubUser(HttpUser):
                     return
 
             self._wait_for_server_ready()
-            if not self.server_running: return
+            if not self.server_running:
+                return
 
             print(f"[{self.username}] Server siap. Membuat kernel...")
             self.client.headers['X-XSRFToken'] = self.client.cookies.get("_xsrf")
@@ -152,6 +150,7 @@ class JupyterHubUser(HttpUser):
             except RequestException as e:
                 print(f"[{self.username}] Exception polling: {e}")
             time.sleep(5)
+
         print(f"[{self.username}] Timeout server.")
         events.request.fire(request_type="spawn", name="timeout", response_time=timeout*1000, response_length=0, exception=Exception("Spawn Timeout"))
 
@@ -161,6 +160,7 @@ class JupyterHubUser(HttpUser):
             print(f"[{self.username}] Menghapus kernel {self.kernel_id}...")
             self.client.delete(f"/user/{self.username}/api/kernels/{self.kernel_id}", name="/user/[user]/api/kernels/[id]")
             self.kernel_id = None
+
         if self.server_running:
             print(f"[{self.username}] Menghentikan server...")
             stop_resp = self.client.delete(f"/hub/api/users/{self.username}/server", name="/hub/api/users/[user]/server")
@@ -169,5 +169,5 @@ class JupyterHubUser(HttpUser):
             self.server_running = False
 
     def on_stop(self):
-        print(f"[{self.username}] Cleanup saat user berhenti...")
+        print(f"[{self.username}] Cleanup stopped user...")
         self.cleanup()

@@ -7,13 +7,18 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-    # Create user
-RUN adduser --disabled-password --gecos "Default user" \
-    --uid ${NB_UID} --home ${HOME} --force-badname ${NB_USER}
+# Create user
+RUN adduser \
+    --disabled-password \
+    --gecos "Default user" \
+    --uid ${NB_UID} \
+    --home ${HOME} \
+    --force-badname \
+    ${NB_USER}
 
 # Install deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-pip python3-dev git curl wget tini \
+    python3-pip python3-dev python3.10-venv git curl wget tini iputils-ping \
     && ln -s /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
@@ -25,6 +30,10 @@ COPY GPU.requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY launch_ipykernel.py /usr/local/bin/launch_ipykernel.py
+
+RUN mkdir -p ${HOME}/work
+
+RUN mkdir -p ${HOME}/.jupyter
 
 # # Install GPU-accelerated PyTorch stack
 # RUN pip install --no-cache-dir \
@@ -40,7 +49,7 @@ COPY launch_ipykernel.py /usr/local/bin/launch_ipykernel.py
 RUN chown -R ${NB_USER}:${NB_USER} ${HOME}
 
 USER ${NB_USER}
-WORKDIR ${HOME}
+WORKDIR ${HOME}/work
 
 EXPOSE 8888
 
