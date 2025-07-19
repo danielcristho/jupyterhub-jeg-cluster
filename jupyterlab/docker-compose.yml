@@ -44,7 +44,6 @@ services:
       - "8081"
     env_file: .env
     environment:
-      # - JUPYTER_GATEWAY_URL=http://192.168.122.1:8889
       - JUPYTER_GATEWAY_URL=http://jeg:8889 
       - POSTGRES_HOST=10.33.17.30
       - POSTGRES_PORT=5432

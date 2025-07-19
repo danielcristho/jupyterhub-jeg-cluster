@@ -2,11 +2,12 @@ import os
 import json
 import random
 import time
+import websocket
+import requests
+import argparse
 from locust import HttpUser, task, between, events
 from threading import Lock
 from requests.exceptions import RequestException
-import requests
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--jupyterhub-url", default=os.getenv('JUPYTERHUB_URL', 'http://10.33.17.30:18000'))
@@ -129,6 +130,7 @@ class JupyterHubUser(HttpUser):
 
         finally:
             self.cleanup()
+    
 
     def _wait_for_server_ready(self, timeout=300):
         print(f"[{self.username}] Menunggu server siap...")
