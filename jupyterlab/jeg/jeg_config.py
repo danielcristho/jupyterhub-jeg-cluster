@@ -1,9 +1,7 @@
-# Simplified configuration for Jupyter Enterprise Gateway (JEG)
 import os
 
 c = get_config()
 
-# Address where remote kernels should send their response
 c.BaseProcessProxy.response_address = '0.0.0.0:8877'
 
 # Cull kernels that have been idle for 1 hour (3600 seconds)
@@ -17,14 +15,12 @@ c.RemoteProcessProxy.socket_timeout = 5.0       # Network socket timeout
 c.RemoteProcessProxy.prepare_timeout = 60.0     # Timeout for kernel preparation
 
 # List of allowed remote hosts where kernels can run
-# Exclude the Hub host to ensure kernels only launch on worker nodes
 c.EnterpriseGatewayApp.remote_hosts = [
     '10.21.73.107',
     '10.21.73.125'
 ]
 
-# Load balancing strategy for distributing kernel launches
-c.EnterpriseGatewayApp.load_balancing_algorithm = "least-connection"
+# c.EnterpriseGatewayApp.load_balancing_algorithm = "least-connection"
 
 # Kernel containers will use ports within this range
 c.RemoteProcessProxy.port_range = "40000..50000"

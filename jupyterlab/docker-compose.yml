@@ -62,14 +62,11 @@ services:
     ports:
       - "8889:8889"
       - "8877:8877"
-      # - "35000-60000:35000-60000" 
     volumes:
-      # - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/var/run/docker.sock:/var/run/docker.sock"
       - "/opt/jupyterhub/kernels:/usr/local/share/jupyter/kernels"
-      # - "~/.ssh/id_rsa:/tmp/.ssh/id_rsa:rw"
-      # - "~/.ssh/id_rsa.pub:/tmp/.ssh/id_rsa.pub:rw"
       - ./jeg/launch_ipykernel.py:/usr/local/share/jupyter/kernels/python_distributed/scripts/launch_ipykernel.py
-      # - "./jeg/ssh_keys:/tmp/.ssh"
+      - "./jeg/ssh_keys:/home/jovyan/.ssh:rw"
 
     depends_on:
       - hub
@@ -77,8 +74,7 @@ services:
       - EG_LOG_LEVEL=DEBUG
       - EG_AUTH_TOKEN=jeg-jeg-an
       - EG_REMOTE_USER=daniel
-      - EG_REMOTE_PWD=Gu3O18g4Fl08
-      # - EG_REMOTE_GSS_SSH=True
+      # - EG_REMOTE_PWD=Gu3O18g4Fl08
       - EG_ALLOW_ORIGIN=*
       - EG_KERNEL_WHITELIST=[]
       - EG_IP=0.0.0.0
