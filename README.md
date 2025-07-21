@@ -8,3 +8,7 @@ References:
 
 - [jupyterhub/jupyterhub](https://github.com/jupyterhub/jupyterhub)
 - [jupyter-server/enterprise_gateway](https://github.com/jupyter-server/enterprise_gateway)
+
+Demo:
+
+![Demo](demo.gif)
