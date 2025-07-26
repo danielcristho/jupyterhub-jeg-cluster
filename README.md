@@ -4,11 +4,11 @@ This final project implements a distributed resource management system using Doc
 
 JupyterHub serves as the main frontend interface, customized to allow users to select computing profiles and nodes. It integrates with the Discovery Service to choose the most optimal node based on current load and availability, and delegates kernel execution to Jupyter Enterprise Gateway (JEG), which launches kernels on the selected remote nodes.
 
+Demo:
+
+![Demo](demo.gif)
+
 References:
 
 - [jupyterhub/jupyterhub](https://github.com/jupyterhub/jupyterhub)
 - [jupyter-server/enterprise_gateway](https://github.com/jupyter-server/enterprise_gateway)
-
-Demo:
-
-![Demo](demo.gif)
