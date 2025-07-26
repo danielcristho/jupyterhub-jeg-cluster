@@ -1,22 +1,22 @@
+import os
 import json
 import uuid
 import time
-import websocket
-import requests
-import os
 import threading
+import requests
+import websocket
+import logging
 
-# Config
-JEG_AUTH_TOKEN = os.environ.get("JEG_AUTH_TOKEN", "jeg-jeg-an")
-JEG_HOST = os.environ.get("JEG_HOST_IP", "10.33.17.30")
-JEG_PORT = os.environ.get("JEG_PORT", "8889")
+from dotenv import load_dotenv
+
+load_dotenv()
+
+JEG_AUTH_TOKEN = os.getenv("JEG_AUTH_TOKEN", "jeg-jeg-an")
+JEG_HOST = os.getenv("JEG_HOST_IP", "127.0.0.1")
+JEG_PORT = os.getenv("JEG_PORT", "8889")
+
 JEG_BASE_URL = f"http://{JEG_HOST}:{JEG_PORT}"
 JEG_WS_URL = f"ws://{JEG_HOST}:{JEG_PORT}"
-
-headers = {
-    "Authorization": f"token {JEG_AUTH_TOKEN}",
-    "Content-Type": "application/json"
-}
 
 KERNEL_SPECS_TO_USE = [
     "python3-docker-rpl",
@@ -24,16 +24,24 @@ KERNEL_SPECS_TO_USE = [
     "python3-docker-rpl-1"
 ]
 
+headers = {
+    "Authorization": f"token {JEG_AUTH_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] %(message)s')
+logger = logging.getLogger("MultiKernelRunner")
+
 active_kernels = []
 kernel_results = {}
 
 def execute_code_in_kernel(kernel_id, ws_connection, code_to_execute, kernel_name):
-    print(f"[{kernel_name}] Mengirim kode ke kernel {kernel_id}...")
-    
+    logger.info(f"[{kernel_name}] Sending code to kernel {kernel_id}...")
+
     msg = {
         "header": {
             "msg_id": str(uuid.uuid4()),
-            "username": "test_multi",
+            "username": "jovyan",
             "session": str(uuid.uuid4()),
             "msg_type": "execute_request",
             "version": "5.3"
@@ -49,134 +57,162 @@ def execute_code_in_kernel(kernel_id, ws_connection, code_to_execute, kernel_nam
     output_buffer = []
     try:
         ws_connection.send(json.dumps(msg))
-        
         timeout_start = time.time()
         timeout_seconds = 180
-        
+
         while time.time() - timeout_start < timeout_seconds:
             res = json.loads(ws_connection.recv())
             msg_type = res.get("msg_type")
-            
+
             if msg_type in ["stream", "execute_result"]:
                 output_part = res["content"].get("text", "")
                 output_buffer.append(output_part)
-                print(f"[{kernel_name}] Output: {output_part.strip()}")
+                logger.info(f"[{kernel_name}] Output: {output_part.strip()}")
             elif msg_type == "error":
                 error_msg = f"Error: {res['content'].get('ename', '')}: {res['content'].get('evalue', '')}"
                 output_buffer.append(error_msg)
-                print(f"[{kernel_name}] {error_msg}")
-                kernel_results[kernel_id] = {"status": "error", "output": "".join(output_buffer), "error": error_msg}
+                logger.error(f"[{kernel_name}] {error_msg}")
+                kernel_results[kernel_id] = {
+                    "status": "error",
+                    "output": "".join(output_buffer),
+                    "error": error_msg
+                }
                 return
             elif msg_type == "status" and res["content"].get("execution_state") == "idle":
-                print(f"[{kernel_name}] Eksekusi selesai. Output akhir: {''.join(output_buffer).strip()[:200]}...")
-                kernel_results[kernel_id] = {"status": "success", "output": "".join(output_buffer)}
+                logger.info(f"[{kernel_name}] Execution finished.")
+                kernel_results[kernel_id] = {
+                    "status": "success",
+                    "output": "".join(output_buffer)
+                }
                 return
-        
-        print(f"[{kernel_name}] Timeout eksekusi untuk kernel {kernel_id}.")
-        kernel_results[kernel_id] = {"status": "timeout", "output": "".join(output_buffer)}
+
+        logger.warning(f"[{kernel_name}] Kernel execution timed out.")
+        kernel_results[kernel_id] = {
+            "status": "timeout",
+            "output": "".join(output_buffer)
+        }
 
     except websocket.WebSocketTimeoutException:
-        print(f"[{kernel_name}] WebSocket recv timeout for kernel {kernel_id}.")
-        kernel_results[kernel_id] = {"status": "ws_timeout", "output": "".join(output_buffer)}
+        logger.warning(f"[{kernel_name}] WebSocket recv timeout.")
+        kernel_results[kernel_id] = {
+            "status": "ws_timeout",
+            "output": "".join(output_buffer)
+        }
     except Exception as e:
-        print(f"[{kernel_name}] WebSocket error for kernel {kernel_id}: {e}")
-        kernel_results[kernel_id] = {"status": "exception", "output": "".join(output_buffer), "exception": str(e)}
+        logger.exception(f"[{kernel_name}] WebSocket error.")
+        kernel_results[kernel_id] = {
+            "status": "exception",
+            "output": "".join(output_buffer),
+            "exception": str(e)
+        }
 
+"""
+Main function, submit jobs to JEG kernel
+"""
 def main():
-    print("run multi-kernel jobs...")
+    logger.info("Starting multi-kernel execution...")
 
     code_to_run = """
 import numpy as np
 import time
 import os
-import platform
 
-print("Starting largest computation")
-MATRIX_SIZE = 10000 
-A = np.random.rand(MATRIX_SIZE, MATRIX_SIZE) 
+print("Starting computation")
+MATRIX_SIZE = 10000
+A = np.random.rand(MATRIX_SIZE, MATRIX_SIZE)
 B = np.random.rand(MATRIX_SIZE, MATRIX_SIZE)
+
+results = []
 start = time.time()
-C = np.matmul(A, B)
-end = time.time()
-print("Done. Overload execution time: {:.2f} seconds".format(end - start))
-print(f"Overload kernel hostname: {os.uname().nodename}")
-print(f"Overload kernel platform: {platform.platform()}")
-time.sleep(20) 
+duration = 0
+i = 0
+while duration < 60:
+    C = np.matmul(A, B)
+    results.append(C)
+    i += 1
+    duration = time.time() - start
+    print(f"Iteration {i} done, elapsed time: {duration:.2f}")
+
+print(f"Total matrices stored: {len(results)}")
+print(f"Running on hostname: {os.uname().nodename}")
 """
 
-    threads = []
+    # Kernel creation and WebSocket setup
     for kernelspec_name in KERNEL_SPECS_TO_USE:
         try:
-            print(f"Mencoba membuat kernel: {kernelspec_name}")
+            logger.info(f"Creating kernel '{kernelspec_name}'...")
             resp = requests.post(f"{JEG_BASE_URL}/api/kernels", headers=headers, json={"name": kernelspec_name})
             resp.raise_for_status()
+
             kernel_id = resp.json()["id"]
-            print(f"Kernel '{kernelspec_name}' created with ID: {kernel_id}")
+            logger.info(f"Kernel '{kernelspec_name}' created with ID: {kernel_id}")
 
             ws_url = f"{JEG_WS_URL}/api/kernels/{kernel_id}/channels"
             ws_headers = [
                 f"Authorization: token {JEG_AUTH_TOKEN}",
                 f"Origin: http://{JEG_HOST}"
             ]
-            ws_connection = websocket.create_connection(ws_url, header=ws_headers, timeout=10) # Timeout koneksi WS
-            print(f"WebSocket terhubung ke kernel {kernel_id}.")
-            
-            active_kernels.append({"id": kernel_id, "ws": ws_connection, "name": kernelspec_name})
-            kernel_results[kernel_id] = {"status": "connecting", "output": ""} # Inisialisasi status
+            ws_connection = websocket.create_connection(ws_url, header=ws_headers, timeout=10)
+            logger.info(f"WebSocket connected to kernel {kernel_id}.")
 
-        except requests.exceptions.RequestException as e:
-            print(f"ERROR: Gagal membuat kernel {kernelspec_name} via HTTP: {e}")
-            continue
-        except websocket.WebSocketException as e:
-            print(f"ERROR: Gagal terhubung WebSocket ke kernel {kernelspec_name}: {e}")
-            continue
+            active_kernels.append({
+                "id": kernel_id,
+                "ws": ws_connection,
+                "name": kernelspec_name
+            })
+            kernel_results[kernel_id] = {"status": "connected", "output": ""}
+
         except Exception as e:
-            print(f"ERROR: Terjadi kesalahan tak terduga saat membuat kernel {kernelspec_name}: {e}")
-            continue
+            logger.error(f"Failed to initialize kernel '{kernelspec_name}': {e}")
 
     if not active_kernels:
-        print("Tidak ada kernel yang berhasil dibuat atau dihubungkan. Keluar.")
+        logger.error("No active kernels available. Aborting.")
         return
 
-    print("\nMenjalankan kode di semua kernel yang aktif...")
-    execution_threads = []
+    # Run code in all active kernels
+    logger.info("Executing code on all active kernels...")
+    threads = []
     for kernel_info in active_kernels:
-        thread = threading.Thread(target=execute_code_in_kernel, 
-                                    args=(kernel_info["id"], kernel_info["ws"], code_to_run, kernel_info["name"]))
-        execution_threads.append(thread)
-        thread.start()
+        t = threading.Thread(target=execute_code_in_kernel, args=(
+            kernel_info["id"],
+            kernel_info["ws"],
+            code_to_run,
+            kernel_info["name"]
+        ))
+        threads.append(t)
+        t.start()
 
-    for thread in execution_threads:
-        thread.join()
+    for t in threads:
+        t.join()
 
-    print("\nCleanup kernel...")
+    # Cleanup
+    logger.info("Cleaning up all kernels...")
     for kernel_info in active_kernels:
         kernel_id = kernel_info["id"]
-        ws_connection = kernel_info["ws"]
         kernel_name = kernel_info["name"]
-
         try:
-            if ws_connection and ws_connection.connected:
-                ws_connection.close()
-                print(f"WebSocket ke kernel {kernel_name} ({kernel_id}) ditutup.")
-            
+            if kernel_info["ws"].connected:
+                kernel_info["ws"].close()
+                logger.info(f"WebSocket for kernel '{kernel_name}' closed.")
             requests.delete(f"{JEG_BASE_URL}/api/kernels/{kernel_id}", headers=headers)
-            print(f"Kernel {kernel_name} ({kernel_id}) dihapus.")
+            logger.info(f"Kernel '{kernel_name}' deleted.")
         except Exception as e:
-            print(f"ERROR: Gagal cleanup kernel {kernel_name} ({kernel_id}): {e}")
+            logger.warning(f"Failed to clean up kernel '{kernel_name}': {e}")
 
+    # Execution Summary
+    logger.info("\n========= SUMMARY :) =========")
     for kernel_id, result in kernel_results.items():
-        print(f"Kernel ID: {kernel_id}")
-        print(f"  Status: {result.get('status', 'unknown')}")
-        if result.get('output'):
-            print(f"  Output (awal): {result['output'].strip()[:100]}...")
-        if result.get('error'):
-            print(f"  Error: {result['error']}")
-        if result.get('exception'):
-            print(f"  Exception: {result['exception']}")
-        print("-" * 30)
+        logger.info(f"Kernel ID: {kernel_id}")
+        logger.info(f"  Status : {result.get('status', 'unknown')}")
+        if result.get("output"):
+            logger.info(f"  Output (first 100 chars): {result['output'].strip()[:100]}...")
+        if result.get("error"):
+            logger.error(f"  Error: {result['error']}")
+        if result.get("exception"):
+            logger.error(f"  Exception: {result['exception']}")
+        logger.info("-" * 40)
 
-    print("Proses selesai.")
+    logger.info("All tasks completed.")
 
 if __name__ == "__main__":
     main()

@@ -74,7 +74,6 @@ services:
       - EG_LOG_LEVEL=DEBUG
       - EG_AUTH_TOKEN=jeg-jeg-an
       - EG_REMOTE_USER=daniel
-      # - EG_REMOTE_PWD=Gu3O18g4Fl08
       - EG_ALLOW_ORIGIN=*
       - EG_KERNEL_WHITELIST=[]
       - EG_IP=0.0.0.0
