@@ -257,8 +257,9 @@ function updateSummary() {
     summaryBox.classList.remove('hidden');
 }
 
+
 function getFallbackProfiles() {
-    // Data cadangan jika API tidak bisa dijangkau
+    // fallback datas
     return [
         { id: 1, name: 'single-cpu', description: 'Single node with CPU only', min_nodes: 1, max_nodes: 1, cpu_requirement: 2, ram_requirement: 2, gpu_required: false },
         { id: 2, name: 'single-gpu', description: 'Single node with GPU acceleration', min_nodes: 1, max_nodes: 1, cpu_requirement: 2, ram_requirement: 2, gpu_required: true },

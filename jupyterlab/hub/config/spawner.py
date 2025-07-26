@@ -51,7 +51,7 @@ def options_from_form(formdata):
     return {
         'profile_id': formdata.get('profile_id', [''])[0],
         'profile_name': formdata.get('profile_name', [''])[0],
-        'selected_nodes': validated_nodes,  # Use validated list, not JSON string
+        'selected_nodes': validated_nodes,
         'primary_node': formdata.get('primary_node', [''])[0],
         'image': formdata.get('image', [''])[0],
     }

@@ -99,7 +99,7 @@ class MultiNodeSpawner(DockerSpawner):
                 "none"
             ],
                 "env": {
-                    "KERNEL_USERNAME": "daniel"
+                    "KERNEL_USERNAME": "jovyan"
                 }
             }
         """

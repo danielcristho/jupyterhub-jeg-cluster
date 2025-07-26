@@ -1,3 +1,5 @@
+# Source: https://github.com/jupyter-server/enterprise_gateway/blob/main/etc/kernel-launchers/bootstrap/bootstrap-kernel.sh
+
 #!/bin/bash
 
 PORT_RANGE=${PORT_RANGE:-${EG_PORT_RANGE:-0..0}}
