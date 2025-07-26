@@ -12,32 +12,3 @@ References:
 Demo:
 
 ![Demo](demo.gif)
-
-```json
-{
-  "count": 1,
-  "selected_nodes": [
-    {
-      "active_jupyterlab": 1,
-      "active_ray": 0,
-      "cpu_cores": 24,
-      "cpu_usage_percent": 1.0,
-      "created_at": "2025-07-08T20:34:14.203389",
-      "disk_usage_percent": 58.5,
-      "gpu_info": [],
-      "has_gpu": true,
-      "hostname": "rpl",
-      "id": 201,
-      "ip": "10.21.73.139",
-      "is_active": true,
-      "load_score": 13.28,
-      "max_containers": 10,
-      "memory_usage_percent": 15.6,
-      "ram_gb": 67.11,
-      "total_containers": 8,
-      "updated_at": "2025-07-10T18:12:15.301315"
-    }
-  ],
-  "status": "ok"
-}
-```
