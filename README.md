@@ -4,6 +4,25 @@ This final project implements a distributed resource management system using Doc
 
 JupyterHub serves as the main frontend interface, customized to allow users to select computing profiles and nodes. It integrates with the Discovery Service to choose the most optimal node based on current load and availability, and delegates kernel execution to Jupyter Enterprise Gateway (JEG), which launches kernels on the selected remote nodes.
 
+## Project Structure
+
+```bash
+├── jupyterlab/               # JupyterHub, JEG, and Benchmark
+│   ├── hub/                  # JupyterHub Config
+│   ├── jeg/                  # Jupyter Enterprise Gateway Config
+│   ├── benchmark/            # Performance testing (Locust)
+│   ├── monitoring/           # Monitoring (Grafana, Prometheus)
+│   └── docker-compose.yml    # Services orchestration
+├── service-agent/            # Agent service
+│   ├── agent.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── service-discovery/        # API Service Discovery
+│   ├── app.py, config.py, ...
+│   ├── docker-compose.yml    # Services orchestration (Flask API, PostgreSQL & Redis)
+│   ├── redis.conf, init.sql, ...
+```
+
 Demo:
 
 ![Demo](demo.gif)
