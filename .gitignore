@@ -29,7 +29,7 @@ rpl
 .env
 
 # Old Project
-infra/
+# infra/
 
 # Docker
 data/
