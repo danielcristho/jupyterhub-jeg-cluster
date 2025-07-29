@@ -1,0 +1,14 @@
+HTTP/1.1 302 Found
+server: TornadoServer/6.5.1
+content-type: text/html
+date: Tue, 22 Jul 2025 10:35:00 GMT
+x-jupyterhub-version: 5.3.0
+access-control-allow-headers: accept, content-type, authorization
+content-security-policy: frame-ancestors 'none'; report-uri /hub/security/csp-report
+location: /hub/home
+content-length: 0
+set-cookie: jupyterhub-session-id=55d8b9fea2f0466a8c45fd98f56053e6; HttpOnly; Path=/
+set-cookie: jupyterhub-hub-login="2|1:0|10:1753180500|20:jupyterhub-hub-login|44:YzFjNTU5ZmNhNDBmNGU5Mjg4ODU0ODUyNWFkOGU4Mzc=|496ee2a8f68dc34771a517a9cba08ff9ed4c8204724373d0ee71bef387f35a97"; expires=Thu, 21 Aug 2025 10:35:00 GMT; HttpOnly; Path=/hub/
+set-cookie: _xsrf=MnwxOjB8MTA6MTc1MzE4MDUwMHw1Ol94c3JmfDEwNDpVbWwzVVZCelZGRjNiRlIwT1hock1XUmlRWEI0TFMwdFIwVlNTVWRRT1ZadFNtOVZXbTVCV1hkQ2J6MDZZekZqTlRVNVptTmhOREJtTkdVNU1qZzRPRFUwT0RVeU5XRmtPR1U0TXpjPXwxMjdlNjBmMjYwZmY5MzFmYzM0NzQxYWMyYjdhNDAxMzljZGQ5ODYzOTE3ZDk3MDllMjNiM2U2MjA3ZGU5OTJm; Path=/hub/
+connection: keep-alive
+
