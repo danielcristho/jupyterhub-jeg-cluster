@@ -1,3 +1,5 @@
+# Source: https://github.com/jupyter-server/enterprise_gateway/blob/main/etc/kernel-launchers/python/scripts/launch_ipykernel.py
+
 """Launch an ipython kernel."""
 
 import argparse
