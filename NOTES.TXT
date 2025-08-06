@@ -1,21 +1,27 @@
-## REDIS CLI 
+## REDIS CLI
+
+docker exec -it redis redis-cli -a redis@pass -p 16379 
 keys *
 get node:chrstdan:ip
 get node:chrstdan:info
 
 ## JEG PASSWORDLESS
- ssh-copy-id -i jeg/ssh_keys/id_rsa.pub daniel@10.21.73.139
-ssh-keyscan -H 10.21.73.139 >> ./jeg/ssh_keys/known_hosts
+
+ssh-keygen -t rsa -b 4096 -N "" -f ./jeg/ssh_keys/id_rsa
+
+ssh-copy-id -i jeg/ssh_keys/id_rsa.pub daniel@10.33.17.30
+ssh-keyscan -H 10.33.17.30 >> ./jeg/ssh_keys/known_hosts
 
 
 ## CONFIGURE DOCKER
 
 sudo nano /lib/systemd/system/docker.service
+
+ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375
+
 sudo systemctl daemon-reload
 sudo systemctl daemon-reexec
 sudo systemctl restart docker.service
-
-ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375
 
 docker run --name agent -d --net=host -e DISCOVERY_URL=http://10.33.17.30:15002/register-node danielcristh0/agent:1.1
 

@@ -15,7 +15,7 @@ class MultiNodeSpawner(DockerSpawner):
     """
 
     jupyter_gateway_public_url = Unicode(
-        "http://10.33.17.30:8889",
+        "http://192.168.122.:8889",
         config=True,
         help="Public URL of Jupyter Enterprise Gateway accessible from JupyterLab containers."
     ).tag(config=True)
@@ -48,7 +48,7 @@ class MultiNodeSpawner(DockerSpawner):
         Prepare environment variables for the user container.
         """
         env = super().get_env()
-        hub_host = os.environ.get('JUPYTERHUB_HUB_HOST', '10.33.17.30')
+        hub_host = os.environ.get('JUPYTERHUB_HUB_HOST', '192.168.122.1')
         hub_port = os.environ.get('JUPYTERHUB_HUB_PORT', '18000')
         
         all_node_ips = [str(node['ip']).strip() for node in self.selected_nodes if 'ip' in node]

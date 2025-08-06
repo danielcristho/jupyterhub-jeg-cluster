@@ -1,4 +1,4 @@
-const API_URL = "http://10.33.17.30:15002";
+const API_URL = "http://192.168.122.1:15002";
 let profiles = [];
 let nodes = [];
 let selectedProfile = null;

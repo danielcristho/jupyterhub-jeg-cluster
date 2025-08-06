@@ -8,23 +8,9 @@ services:
     container_name: discovery-api
     restart: unless-stopped
     ports:
-      - "15002:15002"
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: 'voyager'
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-
-      REDIS_HOST: redis
-      REDIS_PORT: 16379
-      REDIS_PASSWORD: "redis@pass"
-      REDIS_EXPIRE_SECONDS: 45
-
-      API_HOST: 0.0.0.0
-      API_PORT: 15002
-      DEBUG: "True"
-      SECRET_KEY: "secret-service111111"
+      - "${API_PORT}:${API_PORT}"
+    env_file:
+      - .env
     depends_on:
       - postgres
       - redis
@@ -36,18 +22,14 @@ services:
     container_name: postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: ds
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
-      TZ: Asia/Jakarta
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d discovery_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -66,9 +48,9 @@ services:
     environment:
       TZ: Asia/Jakarta
     ports:
-      - "16379:16379"
+      - "${REDIS_PORT}:${REDIS_PORT}"
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "16379", "ping"]
+      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3

@@ -75,6 +75,7 @@ services:
       - EG_LOG_LEVEL=${EG_LOG_LEVEL}
       - EG_AUTH_TOKEN=${EG_AUTH_TOKEN}
       - EG_REMOTE_USER=${EG_REMOTE_USER}
+      - EG_REMOTE_HOSTS=${EG_REMOTE_HOSTS}
       - EG_ALLOW_ORIGIN=*
       - EG_KERNEL_WHITELIST=[]
       - EG_IP=0.0.0.0

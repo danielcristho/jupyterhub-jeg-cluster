@@ -7,7 +7,7 @@ JupyterHub serves as the main frontend interface, customized to allow users to s
 ## Project Structure
 
 ```bash
-├── jupyterlab/               # JupyterHub, JEG, and Benchmark
+├── jupyterlab/               # Jupyter
 │   ├── hub/                  # JupyterHub Config
 │   ├── jeg/                  # Jupyter Enterprise Gateway Config
 │   ├── benchmark/            # Performance testing (Locust)
@@ -22,6 +22,13 @@ JupyterHub serves as the main frontend interface, customized to allow users to s
 │   ├── docker-compose.yml    # Services orchestration (Flask API, PostgreSQL & Redis)
 │   ├── redis.conf, init.sql, ...
 ```
+
+## Requirements
+
+- Python 3.10, 3.11
+- Docker and Docker Compose
+- NVIDIA Driver & nvidia-container-toolkit (for GPU access)
+- 2 or more nodes in a local network (1 node as control node)
 
 Demo:
 

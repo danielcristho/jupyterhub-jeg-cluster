@@ -30,6 +30,7 @@ rpl
 
 # Old Project
 infra/
+qemu/
 
 # Docker
 data/
