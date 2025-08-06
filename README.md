@@ -30,6 +30,14 @@ JupyterHub serves as the main frontend interface, customized to allow users to s
 - NVIDIA Driver & nvidia-container-toolkit (for GPU access)
 - 2 or more nodes in a local network (1 node as control node)
 
+### To Do
+
+- Fix monitoring (Grafana, Prometheus) [ON PROGRESS]
+- Ray Integration (Worker + Jupyter)
+- Update JEG kernel launch
+- Redesign JupyterHub User Interface using Vue.js or React
+- Add API documentation using Swagger
+
 Demo:
 
 ![Demo](demo.gif)
