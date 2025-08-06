@@ -16,7 +16,7 @@ c.RemoteProcessProxy.prepare_timeout = 120.0     # Timeout for kernel preparatio
 c.EnterpriseGatewayApp.remote_hosts = [
     '10.21.73.107',
     '10.21.73.125',
-    '10.21.73.139'
+    '10.21.73.122'
 ]
 
 c.EnterpriseGatewayApp.load_balancing_algorithm = "least-connection"

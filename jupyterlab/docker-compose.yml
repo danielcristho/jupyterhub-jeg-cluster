@@ -29,7 +29,7 @@ services:
       context: ./hub/
       dockerfile: Dockerfile
     restart: unless-stopped
-    image:  danielcristh0/jupyterhub:1.1
+    image: danielcristh0/jupyterhub:1.1
     container_name: jupyterhub
     networks:
       - jupyterhub-network
@@ -44,18 +44,19 @@ services:
       - "8081"
     env_file: .env
     environment:
-      - JUPYTER_GATEWAY_URL=http://jeg:8889 
-      - POSTGRES_HOST=10.33.17.30
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=apollo
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - JUPYTER_GATEWAY_URL=http://jeg:8889
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
   jeg:
     build:
       context: ./jeg
       dockerfile: Dockerfile
     restart: unless-stopped
-    image:  danielcristh0/gateway:1.1
+    image: danielcristh0/gateway:1.1
     container_name: jeg
     networks:
       - jupyterhub-network
@@ -67,22 +68,23 @@ services:
       - "/opt/jupyterhub/kernels:/usr/local/share/jupyter/kernels"
       - ./jeg/launch_ipykernel.py:/usr/local/share/jupyter/kernels/python_distributed/scripts/launch_ipykernel.py
       - "./jeg/ssh_keys:/home/jovyan/.ssh:rw"
-
     depends_on:
       - hub
+    env_file: .env
     environment:
-      - EG_LOG_LEVEL=DEBUG
-      - EG_AUTH_TOKEN=jeg-jeg-an
-      - EG_REMOTE_USER=daniel
+      - EG_LOG_LEVEL=${EG_LOG_LEVEL}
+      - EG_AUTH_TOKEN=${EG_AUTH_TOKEN}
+      - EG_REMOTE_USER=${EG_REMOTE_USER}
       - EG_ALLOW_ORIGIN=*
       - EG_KERNEL_WHITELIST=[]
       - EG_IP=0.0.0.0
       - EG_PORT=8889
-      - EG_RESPONSE_IP=10.33.17.30
+      - EG_RESPONSE_IP=${EG_RESPONSE_IP}
       - EG_RESPONSE_PORT=8877
       - EG_RESPONSE_ADDR_ANY=true
       - EG_SOCKET_TIMEOUT=2.0
       - JUPYTER_GATEWAY_HOST=0.0.0.0
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -95,13 +97,15 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
       - jupyterhub-network
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
+    env_file: .env
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=monitoring
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
