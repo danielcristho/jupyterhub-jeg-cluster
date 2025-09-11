@@ -1,4 +1,4 @@
-const API_URL = "http://192.168.122.1:15002";
+const API_URL = "http://172.20.10.2:15002";
 let profiles = [];
 let nodes = [];
 let selectedProfile = null;
@@ -257,6 +257,42 @@ function updateSummary() {
     summaryBox.classList.remove('hidden');
 }
 
+// Cluster Summary
+async function loadClusterSummary() {
+    const summaryContent = document.getElementById('cluster-summary-content');
+    if (!summaryContent) return;
+
+    try {
+        const resp = await fetch(`${API_URL}/all-nodes`);
+        if (!resp.ok) {
+            throw new Error('Failed to fetch node list');
+        }
+        const data = await resp.json();
+        
+        const allNodes = data.nodes || [];
+        const activeNodes = allNodes.filter(node => node.is_active);
+
+        const totalOnline = activeNodes.length;
+        const totalOffline = allNodes.length - totalOnline;
+        const totalCPU = activeNodes.reduce((sum, n) => sum + (n.cpu_cores || 0), 0);
+        const totalRAM = activeNodes.reduce((sum, n) => sum + (n.ram_gb || 0), 0);
+        const totalGPU = activeNodes.filter(n => n.has_gpu).length;
+        
+        let summaryText = `
+            <div class="summary-details">
+                <div class="summary-item"><strong>Nodes:</strong> ${totalOnline} Online / ${totalOffline} Offline</div>
+                <div class="summary-item"><strong>Total CPU:</strong> ${totalCPU} cores</div>
+                <div class="summary-item"><strong>Total RAM:</strong> ${totalRAM.toFixed(1)} GB</div>
+                ${totalGPU > 0 ? `<div class="summary-item"><strong>Total GPU:</strong> ${totalGPU}</div>` : ''}
+            </div>
+        `;
+        summaryContent.innerHTML = summaryText;
+
+    } catch (e) {
+        console.error('Error loading cluster summary:', e);
+        summaryContent.innerHTML = '<div class="summary-error">Failed to load cluster summary. Check service status.</div>';
+    }
+}
 
 function getFallbackProfiles() {
     // fallback datas

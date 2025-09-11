@@ -9,15 +9,21 @@
 <body>
   <div class="container">
 
-    <!-- Status Bar -->
     <div class="status-bar" id="status-bar">
       <div class="status-item info">
         <span class="status-icon">⏳</span>
         <span>Connecting to service...</span>
       </div>
     </div>
+    
+    <div class="card summary-card" style="margin-bottom: 20px;">
+      <h3 class="section-title">Cluster Summary</h3>
+      <div id="cluster-summary-content" class="loading">
+        <span class="spinner"></span>
+        Getting cluster information...
+      </div>
+    </div>
 
-    <!-- Profile Selection -->
     <div class="card">
       <h3 class="section-title">Select Profile</h3>
       <div id="profile-grid" class="profile-grid">
@@ -28,10 +34,8 @@
       </div>
     </div>
 
-    <!-- Environment Configuration -->
     <div class="card">
       <h3 class="section-title">Environment Configuration</h3>
-
       <div class="form-group">
         <label class="form-label">Docker Image</label>
         <select name="image" id="image">
@@ -53,7 +57,6 @@
             <label for="multi">Multi Node</label>
           </div>
         </div>
-
         <div id="multi-config" class="hidden">
           <select id="num_nodes">
             <option value="2">2 Nodes - Small cluster</option>
@@ -65,7 +68,6 @@
       </div>
     </div>
 
-    <!-- Node Selection -->
     <div class="card">
       <h3 class="section-title">Available Nodes</h3>
       <div id="node-list" class="node-list">
@@ -74,7 +76,6 @@
           Discovering available nodes...
         </div>
       </div>
-
       <div id="selection-summary" class="summary-box hidden">
         <div class="summary-title">Selection Summary</div>
         <div class="summary-content" id="summary-content"></div>
@@ -82,17 +83,12 @@
     </div>
 
     <input type="hidden" name="profile_id" id="profile_id" />
-        <input type="hidden" name="profile_name" id="profile_name" />
-        <input type="hidden" name="selected_nodes" id="selected_nodes" />
-        <input type="hidden" name="primary_node" id="primary_node" />
-        <input type="hidden" name="node_count_final" id="node_count_final" value="1" />
-
-    <!-- <div class="card" style="text-align: right;">
-      <button id="next-button" class="launch-button" style="background: #f37626; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Next: Review & Launch ➜</button>
-    </div>
-  </div> -->
+    <input type="hidden" name="profile_name" id="profile_name" />
+    <input type="hidden" name="selected_nodes" id="selected_nodes" />
+    <input type="hidden" name="primary_node" id="primary_node" />
+    <input type="hidden" name="node_count_final" id="node_count_final" value="1" />
+  </div>
 
   <script src="/form/main.js"></script>
 </body>
 </html>
-
