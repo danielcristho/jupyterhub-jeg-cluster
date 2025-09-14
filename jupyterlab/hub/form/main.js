@@ -1,4 +1,4 @@
-const API_URL = "http://172.20.10.2:15002";
+const API_URL = "http://192.168.100.121:15002";
 let profiles = [];
 let nodes = [];
 let selectedProfile = null;
@@ -260,32 +260,45 @@ function updateSummary() {
 // Cluster Summary
 async function loadClusterSummary() {
     const summaryContent = document.getElementById('cluster-summary-content');
-    if (!summaryContent) return;
+    if (!summaryContent) {
+        console.error('Element with ID "cluster-summary-content" not found.');
+        return;
+    }
 
     try {
-        const resp = await fetch(`${API_URL}/all-nodes`);
-        if (!resp.ok) {
-            throw new Error('Failed to fetch node list');
-        }
-        const data = await resp.json();
-        
-        const allNodes = data.nodes || [];
-        const activeNodes = allNodes.filter(node => node.is_active);
-
-        const totalOnline = activeNodes.length;
-        const totalOffline = allNodes.length - totalOnline;
-        const totalCPU = activeNodes.reduce((sum, n) => sum + (n.cpu_cores || 0), 0);
-        const totalRAM = activeNodes.reduce((sum, n) => sum + (n.ram_gb || 0), 0);
-        const totalGPU = activeNodes.filter(n => n.has_gpu).length;
-        
-        let summaryText = `
-            <div class="summary-details">
-                <div class="summary-item"><strong>Nodes:</strong> ${totalOnline} Online / ${totalOffline} Offline</div>
-                <div class="summary-item"><strong>Total CPU:</strong> ${totalCPU} cores</div>
-                <div class="summary-item"><strong>Total RAM:</strong> ${totalRAM.toFixed(1)} GB</div>
-                ${totalGPU > 0 ? `<div class="summary-item"><strong>Total GPU:</strong> ${totalGPU}</div>` : ''}
+        summaryContent.innerHTML = `
+            <div class="loading">
+                <span class="spinner"></span>
+                Getting cluster information...
             </div>
         `;
+
+        const resp = await fetch(`${API_URL}/cluster-summary`);
+        
+        if (!resp.ok) {
+            throw new Error(`Failed to fetch cluster summary: ${resp.status} ${resp.statusText}`);
+        }
+        
+        const data = await resp.json();
+        
+        const activeNodes = data.active_nodes;
+        const totalNodes = data.total_nodes;
+        const offlineNodes = totalNodes - activeNodes;
+        
+        const totalJupyterlab = data.total_containers.jupyterlab;
+        const totalRay = data.total_containers.ray;
+        
+        const summaryText = `
+            <div class="summary-details">
+                <div class="summary-item">
+                    <strong>Nodes:</strong> ${activeNodes} Online / ${offlineNodes} Offline
+                </div>
+                <div class="summary-item">
+                    <strong>Containers:</strong> ${totalJupyterlab} Jupyterlab, ${totalRay} Ray
+                </div>
+            </div>
+        `;
+
         summaryContent.innerHTML = summaryText;
 
     } catch (e) {
